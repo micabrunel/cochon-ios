@@ -11,7 +11,8 @@ struct CochonApp: App {
     private let scene: SceneDemo?
 
     init() {
-        scene = demo.ecran.flatMap { Demo.scene($0, graine: demo.graine) }
+        let lancement = demo
+        scene = lancement.ecran.flatMap { Demo.scene($0, graine: lancement.graine) }
         // Captures identiques d'une fois sur l'autre : réglages par défaut,
         // quels que soient ceux restés dans le simulateur. Seulement quand
         // l'app est lancée avec `-ecran` (jamais par un joueur).
