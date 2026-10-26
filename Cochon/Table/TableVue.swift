@@ -45,6 +45,14 @@ struct TableVue: View {
                     haut(d)
                     CalqueAnnonces(modele: modele, d: d)
                 }
+                // La table est un plateau à cotes fixes : son texte grandit
+                // avec Dynamic Type jusqu'à la plus grande taille standard
+                // (XXXL), pas au-delà ; sinon le bandeau se tronque (« À… »),
+                // les étiquettes des côtés sortent de l'écran et la consigne
+                // recouvre la pioche. VoiceOver n'est pas touché. Les feuilles
+                // (menu, règles) et les résultats, hors de ce calque, suivent
+                // toujours la taille choisie.
+                .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
             }
             if modele.resultatsVisibles {
                 ResultatsVue(vue: modele.vue, rejouer: rejouer, accueil: quitter)
@@ -120,7 +128,7 @@ struct TableVue: View {
                             actif: modele.distributionFaite && modele.vue.actif == j
                                 && modele.vue.phase != .ouverture && modele.vue.phase != .terminee,
                             score: modele.vue.scores?[j])
-                .position(d.etiquette(place))
+                .modifier(PoseDansEcran(d: d, centre: d.etiquette(place)))
         }
     }
 
@@ -295,15 +303,21 @@ struct Banniere: View {
         let socle = banniere.aMoi ? Palette.turquoiseSocle : Palette.framboiseSocle
         let forme = RoundedRectangle(cornerRadius: 16, style: .continuous)
         HStack(spacing: 8) {
+            // Une ligne, réduite plutôt que tronquée (« À… ») si la place manque.
             Text(banniere.titre)
                 .font(Police.titre(21))
                 .foregroundStyle(.white)
                 .shadow(color: socle, radius: 0, x: 0, y: 2)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+                .layoutPriority(1)
                 .contentTransition(.opacity)
             Spacer(minLength: 4)
             if let detail = banniere.detail {
                 Text(detail)
                     .font(Police.texte(13))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(.white)
                     .padding(.horizontal, 9)
                     .padding(.vertical, 1)
@@ -348,11 +362,11 @@ struct EtiquetteJoueur: View {
         HStack(spacing: 6) {
             if estMoi {
                 if actif { pastille }
-                Text(nom).font(Police.etiquette(13))
+                Text(nom).font(Police.etiquette(13)).lineLimit(1)
                 compteur(Palette.turquoise)
             } else {
                 compteur(Palette.rose)
-                Text(nom).font(Police.etiquette(13))
+                Text(nom).font(Police.etiquette(13)).lineLimit(1)
                 if actif { pastille }
             }
             if let score {
@@ -391,6 +405,35 @@ struct EtiquetteJoueur: View {
                         halo.scaleEffect(reduire ? 1.6 : (grand ? 2.1 : 1.4)).opacity(reduire ? 1 : (grand ? 0.2 : 1))
                     } animation: { _ in .easeInOut(duration: 0.8) }
             }
+    }
+}
+
+/// Pose une vue centrée sur `centre` (comme `.position`), mais ramenée
+/// dans l'écran si elle déborderait (`Disposition.centreDansEcran`).
+private struct PoseDansEcran: ViewModifier {
+    let d: Disposition
+    let centre: CGPoint
+
+    func body(content: Content) -> some View {
+        DisposeDansEcran(d: d, centre: centre) { content }
+    }
+}
+
+private struct DisposeDansEcran: Layout {
+    let d: Disposition
+    let centre: CGPoint
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        proposal.replacingUnspecifiedDimensions()
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        for vue in subviews {
+            let taille = vue.sizeThatFits(.unspecified)
+            let c = d.centreDansEcran(centre, taille: taille)
+            vue.place(at: CGPoint(x: bounds.minX + c.x, y: bounds.minY + c.y), anchor: .center,
+                      proposal: ProposedViewSize(taille))
+        }
     }
 }
 
