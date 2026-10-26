@@ -549,10 +549,13 @@ struct BadgeVue: View {
             Image(systemName: "eye").font(.system(size: 11, weight: .bold))
             Text("vue").font(Police.etiquette(12))
         }
+        .lineLimit(1)
         .foregroundStyle(Palette.fleche)
         .padding(.leading, 6).padding(.trailing, 8).padding(.vertical, 2)
         .background(Capsule().fill(Palette.encre))
         .shadow(color: .black.opacity(0.3), radius: 0, x: 0, y: 2)
+        // Plus large que la carte en grand texte : déborde, jamais « vu / e ».
+        .fixedSize()
         .accessibilityHidden(true)
     }
 }
