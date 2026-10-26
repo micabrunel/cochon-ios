@@ -525,8 +525,9 @@ struct EtiquetteAction: View {
 }
 
 /// Le gros bouton rond COCHON! (maquette : 100 pt, penché de -8°, anneaux
-/// blanc et jaune). Éteint hors de propos ; quand il s'allume, il
-/// frétille une fois.
+/// blanc et jaune). Éteint hors de propos : désaturé et disque assombri,
+/// texte blanc plein (contraste ≥ 3:1, sans opacité qui laisserait passer
+/// le fond) ; quand il s'allume, il frétille une fois.
 struct BoutonCochon: View {
     let actif: Bool
     let diametre: CGFloat
@@ -541,10 +542,9 @@ struct BoutonCochon: View {
                 .shadow(color: Palette.framboiseSocle, radius: 0, x: 0, y: 3)
                 .frame(width: diametre, height: diametre)
         }
-        .buttonStyle(StyleCochon(diametre: diametre))
+        .buttonStyle(StyleCochon(diametre: diametre, actif: actif))
         .rotationEffect(.degrees(-8))
         .saturation(actif ? 1 : 0.35)
-        .opacity(actif ? 1 : 0.75)
         .disabled(!actif)
         .keyframeAnimator(initialValue: 0.0, trigger: actif) { bouton, angle in
             bouton.rotationEffect(.degrees(actif && !reduire ? angle : 0))
@@ -563,6 +563,7 @@ struct BoutonCochon: View {
 
 private struct StyleCochon: ButtonStyle {
     let diametre: CGFloat
+    let actif: Bool
 
     func makeBody(configuration: Configuration) -> some View {
         let enfonce = configuration.isPressed
@@ -574,6 +575,8 @@ private struct StyleCochon: ButtonStyle {
                     .overlay(Circle().strokeBorder(
                         LinearGradient(colors: [.white.opacity(0.4), .clear, .clear, Palette.cochonOmbre],
                                        startPoint: .top, endPoint: .bottom), lineWidth: 6))
+                    // Éteint : seul le disque s'assombrit, le texte reste blanc.
+                    .brightness(actif ? 0 : -0.2)
             }
             .offset(y: enfonce ? 4 : 0)
             .background { Circle().fill(Palette.framboiseSocle).offset(y: 6) }

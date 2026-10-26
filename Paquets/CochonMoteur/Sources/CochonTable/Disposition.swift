@@ -114,6 +114,29 @@ public struct Disposition: Sendable {
         }
     }
 
+    // MARK: - « +1 » de pénalité
+
+    /// Cadre du texte « +1 » (Lilita One 30 pt, ombre comprise).
+    public var taillePlusUn: CGSize { t(44, 40) }
+
+    /// Centre du « +1 » d'un joueur pénalisé, au repos (début de l'envol).
+    /// Pour moi : à droite de l'étiquette « Toi », sous ma main, jamais
+    /// posé sur mes cartes (l'étiquette fait au plus ~90 pt de large avec
+    /// la pastille). Pour un ordi : en haut à droite de son étiquette.
+    public func plusUn(_ place: Place) -> CGPoint {
+        let e = etiquette(place)
+        switch place {
+        case .bas: return CGPoint(x: e.x + 76 * echelle, y: e.y)
+        default: return CGPoint(x: e.x + 34 * echelle, y: e.y - 26 * echelle)
+        }
+    }
+
+    /// Envol du « +1 » pendant qu'il s'efface : vers la droite pour moi
+    /// (au-dessus, il traverserait ma main), vers le haut pour un ordi.
+    public func envolPlusUn(_ place: Place) -> CGSize {
+        place == .bas ? t(36, 0) : t(0, -36)
+    }
+
     // MARK: - Pose d'une carte
 
     public func place(_ joueur: Int) -> Place { Place.de(joueur, moi: moi, nombreJoueurs: nombreJoueurs) }

@@ -6,8 +6,12 @@ import SwiftUI
 struct CochonApp: App {
     /// Mode démo : `-ecran <nom> [-graine <n>]` (scripts/captures-ecrans.sh).
     private let demo = Demo.lancement(arguments: ProcessInfo.processInfo.arguments)
+    /// Mode démo : la table figée, calculée une seule fois au lancement
+    /// (jusqu'à 300 parties essayées), jamais à chaque ré-init d'une vue.
+    private let scene: SceneDemo?
 
     init() {
+        scene = demo.ecran.flatMap { Demo.scene($0, graine: demo.graine) }
         // Captures identiques d'une fois sur l'autre : réglages par défaut,
         // quels que soient ceux restés dans le simulateur. Seulement quand
         // l'app est lancée avec `-ecran` (jamais par un joueur).
@@ -23,7 +27,7 @@ struct CochonApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RacineVue(demo: demo)
+            RacineVue(demo: demo, scene: scene)
         }
     }
 }
@@ -45,9 +49,8 @@ struct RacineVue: View {
     /// Mode démo : la table figée à ouvrir (une seule fois).
     @State private var scene: SceneDemo?
 
-    init(demo: LancementDemo = LancementDemo(graine: Demo.graineParDefaut)) {
+    init(demo: LancementDemo = LancementDemo(graine: Demo.graineParDefaut), scene: SceneDemo? = nil) {
         self.demo = demo
-        let scene = demo.ecran.flatMap { Demo.scene($0, graine: demo.graine) }
         _scene = State(initialValue: scene)
         _enPartie = State(initialValue: scene != nil)
         if let nom = demo.nomInconnu {

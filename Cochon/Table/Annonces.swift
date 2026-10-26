@@ -16,8 +16,9 @@ struct CalqueAnnonces: View {
                     AnnonceCochon(texte: Textes.sousTitreCochon(j, moi: modele.moi, toursRestants: n))
                         .transition(.opacity)
                 case .plusUn(let j):
-                    PlusUn(fige: modele.fige)
-                        .position(x: d.etiquette(d.place(j)).x + 34 * d.echelle, y: d.etiquette(d.place(j)).y - 26 * d.echelle)
+                    PlusUn(envol: d.envolPlusUn(d.place(j)), fige: modele.fige)
+                        .frame(width: d.taillePlusUn.width, height: d.taillePlusUn.height)
+                        .position(d.plusUn(d.place(j)))
                         .transition(.opacity)
                 default:
                     Bulle(texte: Textes.annonce(a.annonce, moi: modele.moi), ton: ton(a.annonce))
@@ -63,9 +64,12 @@ struct Bulle: View {
     }
 }
 
-/// « +1 » qui monte en s'effaçant près de l'étiquette du joueur pénalisé.
+/// « +1 » qui s'envole en s'effaçant près de l'étiquette du joueur
+/// pénalisé (point et sens : `Disposition.plusUn` / `envolPlusUn`).
 struct PlusUn: View {
-    /// Mode démo : arrêté à mi-course, bien visible, pour la capture.
+    /// Déplacement complet pendant l'effacement.
+    let envol: CGSize
+    /// Mode démo : arrêté au point de départ, bien visible, pour la capture.
     var fige = false
     @State var parti = false
     @Environment(\.accessibilityReduceMotion) var reduire
@@ -75,7 +79,7 @@ struct PlusUn: View {
             .font(Police.titre(30))
             .foregroundStyle(Palette.jaune)
             .shadow(color: Palette.framboiseSocle, radius: 0, x: 0, y: 3)
-            .offset(y: fige ? -16 : (parti && !reduire ? -36 : 0))
+            .offset(parti && !reduire && !fige ? envol : .zero)
             .scaleEffect(fige || parti || reduire ? 1 : 0.7)
             .opacity(fige ? 1 : (parti ? 0 : 1))
             .onAppear {

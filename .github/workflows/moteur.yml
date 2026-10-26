@@ -21,6 +21,12 @@ permissions:
 jobs:
   tests:
     name: Tests du moteur (Linux)
+    # Dépôt public : une PR venue d'un fork ne tourne JAMAIS sur le runner
+    # du cluster (elle exécuterait son propre YAML chez nous). Défense en
+    # profondeur, en plus de l'approbation obligatoire des contributeurs
+    # externes. Sur un fork, le contrôle est alors « ignoré » : relancer
+    # les tests depuis une branche du dépôt avant toute fusion.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: [self-hosted, linux, cluster]
     container: swift:6.1
     timeout-minutes: 30

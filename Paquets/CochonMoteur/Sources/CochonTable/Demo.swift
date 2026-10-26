@@ -51,6 +51,15 @@ public enum EcranDemo: String, CaseIterable, Sendable {
         default: return true
         }
     }
+
+    /// Vrai pour les seuls écrans où quelqu'un a déjà annoncé COCHON! ;
+    /// partout ailleurs, la scène retenue n'a aucune annonce.
+    public var apresUneAnnonce: Bool {
+        switch self {
+        case .cochon, .derniereOrbite, .resultats: return true
+        default: return false
+        }
+    }
 }
 
 /// Une table figée, prête à dessiner.
@@ -212,6 +221,10 @@ public enum Demo {
                         etat: EtatPartie, tour: Int) -> Arrivee? {
         let moi = vue.moi
         let parMoi = action.joueur == moi
+        // Personne n'a encore annoncé COCHON!, sauf sur les écrans qui le
+        // montrent : sinon la bannière dit « Dernier tour » et le bouton
+        // COCHON! est éteint pour une autre raison que celle de l'écran.
+        if !ecran.apresUneAnnonce && vue.cochonPar != nil { return nil }
         switch ecran {
         case .accueil, .regles, .parametres:
             return nil

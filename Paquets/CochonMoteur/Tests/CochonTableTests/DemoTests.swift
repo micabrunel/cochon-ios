@@ -108,6 +108,17 @@ final class DemoTests: XCTestCase {
         XCTAssertTrue(fin.plateau.jetonsAffiches(profondeurVisible: 0).allSatisfy(\.montree))
     }
 
+    /// Relecture #4 (B2) : hors COCHON!, dernière orbite et résultats,
+    /// personne n'a annoncé : jamais de « Dernier tour » sur la capture.
+    func testPasDeDernierTourHorsDesEcransDeLAnnonce() throws {
+        XCTAssertEqual(EcranDemo.allCases.filter(\.apresUneAnnonce), [.cochon, .derniereOrbite, .resultats])
+        for ecran in tables where !ecran.apresUneAnnonce {
+            let s = try XCTUnwrap(Demo.scene(ecran), ecran.rawValue)
+            XCTAssertNil(s.vue.cochonPar, ecran.rawValue)
+            XCTAssertNotEqual(Textes.banniere(s.vue, tour: s.compteur.tour).detail, "Dernier tour", ecran.rawValue)
+        }
+    }
+
     func testUneAutreGraineDonneUneAutrePartie() throws {
         let a = try XCTUnwrap(Demo.scene(.monTour))
         let b = try XCTUnwrap(Demo.scene(.monTour, graine: 7))
