@@ -6,6 +6,11 @@
 //
 //   CochonMoteur  état immuable, coups sérialisables, arbitre, vue par joueur
 //   CochonIA      ordinateur à deux niveaux, qui ne lit que la vue du joueur
+//   CochonTable   logique d'affichage de la table, sans SwiftUI : arbitre
+//                 local, places, cartes physiques (jetons), chorégraphie des
+//                 animations, textes. Testée sous Linux ; l'app ne fait que
+//                 la dessiner. Elle ne contient aucune règle : elle suit les
+//                 événements et la vue rendus par le moteur.
 
 import PackageDescription
 
@@ -15,11 +20,14 @@ let package = Package(
     products: [
         .library(name: "CochonMoteur", targets: ["CochonMoteur"]),
         .library(name: "CochonIA", targets: ["CochonIA"]),
+        .library(name: "CochonTable", targets: ["CochonTable"]),
     ],
     targets: [
         .target(name: "CochonMoteur"),
         .target(name: "CochonIA", dependencies: ["CochonMoteur"]),
+        .target(name: "CochonTable", dependencies: ["CochonMoteur", "CochonIA"]),
         .testTarget(name: "CochonMoteurTests", dependencies: ["CochonMoteur"]),
         .testTarget(name: "CochonIATests", dependencies: ["CochonIA", "CochonMoteur"]),
+        .testTarget(name: "CochonTableTests", dependencies: ["CochonTable", "CochonIA", "CochonMoteur"]),
     ]
 )

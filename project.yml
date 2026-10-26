@@ -13,7 +13,8 @@ configFiles:
   Release: Config/Signature.xcconfig
 
 packages:
-  # Règles et ordinateur, en Swift pur, testés à part (aussi sous Linux).
+  # Règles, ordinateur et logique d'affichage de la table, en Swift pur,
+  # testés à part (aussi sous Linux).
   CochonMoteur:
     path: Paquets/CochonMoteur
 
@@ -33,6 +34,11 @@ targets:
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         UIRequiresFullScreen: true
         ITSAppUsesNonExemptEncryption: false
+        # Polices de la maquette 1 (licence OFL, Cochon/Polices).
+        UIAppFonts:
+          - LilitaOne-Regular.ttf
+          - Baloo2-Bold.ttf
+          - Baloo2-ExtraBold.ttf
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.micabrunel.cochon
@@ -47,3 +53,5 @@ targets:
         product: CochonMoteur
       - package: CochonMoteur
         product: CochonIA
+      - package: CochonMoteur
+        product: CochonTable
