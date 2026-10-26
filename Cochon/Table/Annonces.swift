@@ -77,6 +77,7 @@ struct PlusUn: View {
     var body: some View {
         Text("+1")
             .font(Police.titre(30))
+            .fixedSize() // le cadre ne sert qu'à poser : jamais « … » (iPhone 16e)
             .foregroundStyle(Palette.jaune)
             .shadow(color: Palette.framboiseSocle, radius: 0, x: 0, y: 3)
             .offset(parti && !reduire && !fige ? envol : .zero)

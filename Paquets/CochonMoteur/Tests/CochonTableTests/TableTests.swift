@@ -104,6 +104,26 @@ final class PlacesEtDispositionTests: XCTestCase {
         XCTAssertGreaterThan(d.envolPlusUn(.bas).width, 0)
     }
 
+    func testUneEtiquetteQuiGranditNEstJamaisCoupeeParLesBords() {
+        let d = Disposition(taille: CGSize(width: 390, height: 763), moi: 0, nombreJoueurs: 4)
+        // Taille normale : l'étiquette reste à sa place de maquette.
+        let petite = CGSize(width: 80, height: 30)
+        for place in Place.allCases {
+            XCTAssertEqual(d.centreDansEcran(d.etiquette(place), taille: petite), d.etiquette(place), "\(place)")
+        }
+        // Grand texte : « ORDI 1 » à gauche et « ORDI 3 » à droite rentrent dans l'écran.
+        let grande = CGSize(width: 150, height: 40)
+        let gauche = rect(d.centreDansEcran(d.etiquette(.gauche), taille: grande), grande)
+        let droite = rect(d.centreDansEcran(d.etiquette(.droite), taille: grande), grande)
+        XCTAssertEqual(gauche.minX, 6, accuracy: 0.001)
+        XCTAssertEqual(droite.maxX, 390 - 6, accuracy: 0.001)
+        XCTAssertEqual(gauche.midY, d.etiquette(.gauche).y, accuracy: 0.001, "même hauteur")
+        // « Toi » reste posée sous la zone sûre, comme sur la maquette.
+        XCTAssertEqual(d.centreDansEcran(d.etiquette(.bas), taille: grande).y, d.etiquette(.bas).y)
+        // Plus large que l'écran : centrée.
+        XCTAssertEqual(d.centreDansEcran(d.etiquette(.gauche), taille: CGSize(width: 500, height: 30)).x, 195)
+    }
+
     private func rect(_ c: CGPoint, _ t: CGSize) -> CGRect {
         CGRect(x: c.x - t.width / 2, y: c.y - t.height / 2, width: t.width, height: t.height)
     }
