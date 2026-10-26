@@ -1,8 +1,13 @@
 // Géométrie de la table, tirée de la maquette 1 « Fête foraine »
 // (390 × 844 pt, iPhone 14/15). Toutes les cotes sont celles de la
 // maquette ; elles sont ramenées à la zone sûre réelle de l'écran.
-// Sans SwiftUI : CGPoint et CGSize viennent de Foundation (aussi sous Linux).
+// Sans SwiftUI : CGPoint et CGSize viennent de Foundation sous Linux, de
+// CoreGraphics sur Apple (où Foundation seul ne rend pas visible leur
+// conformité à Equatable).
 
+#if canImport(CoreGraphics)
+import CoreGraphics
+#endif
 import Foundation
 
 /// Place d'un joueur autour de la table, vue depuis le joueur (toujours en bas).
@@ -107,6 +112,29 @@ public struct Disposition: Sendable {
         case .gauche: return m(46, 333)
         case .droite: return m(344, 333)
         }
+    }
+
+    // MARK: - « +1 » de pénalité
+
+    /// Cadre du texte « +1 » (Lilita One 30 pt, ombre comprise).
+    public var taillePlusUn: CGSize { t(44, 40) }
+
+    /// Centre du « +1 » d'un joueur pénalisé, au repos (début de l'envol).
+    /// Pour moi : à droite de l'étiquette « Toi », sous ma main, jamais
+    /// posé sur mes cartes (l'étiquette fait au plus ~90 pt de large avec
+    /// la pastille). Pour un ordi : en haut à droite de son étiquette.
+    public func plusUn(_ place: Place) -> CGPoint {
+        let e = etiquette(place)
+        switch place {
+        case .bas: return CGPoint(x: e.x + 76 * echelle, y: e.y)
+        default: return CGPoint(x: e.x + 34 * echelle, y: e.y - 26 * echelle)
+        }
+    }
+
+    /// Envol du « +1 » pendant qu'il s'efface : vers la droite pour moi
+    /// (au-dessus, il traverserait ma main), vers le haut pour un ordi.
+    public func envolPlusUn(_ place: Place) -> CGSize {
+        place == .bas ? t(36, 0) : t(0, -36)
     }
 
     // MARK: - Pose d'une carte

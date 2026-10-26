@@ -6,16 +6,20 @@ import SwiftUI
 struct TableVue: View {
     let reglages: Reglages
     let quitter: () -> Void
+    /// Mode démo : ouvrir le menu de la partie dès l'arrivée.
+    let menuAuDepart: Bool
 
     @State private var modele: TableModele
     @State private var menuOuvert = false
     @State private var reglesOuvertes = false
     @Environment(\.accessibilityReduceMotion) private var reduire
 
-    init(reglages: Reglages, quitter: @escaping () -> Void) {
+    init(reglages: Reglages, scene: SceneDemo? = nil, quitter: @escaping () -> Void) {
         self.reglages = reglages
         self.quitter = quitter
-        _modele = State(initialValue: TableModele(reglages: reglages))
+        menuAuDepart = scene?.ecran == .menu
+        _modele = State(initialValue: scene.map { TableModele(reglages: reglages, scene: $0) }
+                            ?? TableModele(reglages: reglages))
     }
 
     var body: some View {
@@ -53,6 +57,7 @@ struct TableVue: View {
         .onAppear {
             modele.rythme.reduire = reduire
             modele.demarrer()
+            if menuAuDepart { menuOuvert = true }
         }
         .onDisappear { modele.arreter() }
         .onChange(of: reduire) { _, valeur in modele.rythme.reduire = valeur }
@@ -520,8 +525,9 @@ struct EtiquetteAction: View {
 }
 
 /// Le gros bouton rond COCHON! (maquette : 100 pt, penché de -8°, anneaux
-/// blanc et jaune). Éteint hors de propos ; quand il s'allume, il
-/// frétille une fois.
+/// blanc et jaune). Éteint hors de propos : désaturé et disque assombri,
+/// texte blanc plein (contraste ≥ 3:1, sans opacité qui laisserait passer
+/// le fond) ; quand il s'allume, il frétille une fois.
 struct BoutonCochon: View {
     let actif: Bool
     let diametre: CGFloat
@@ -536,10 +542,9 @@ struct BoutonCochon: View {
                 .shadow(color: Palette.framboiseSocle, radius: 0, x: 0, y: 3)
                 .frame(width: diametre, height: diametre)
         }
-        .buttonStyle(StyleCochon(diametre: diametre))
+        .buttonStyle(StyleCochon(diametre: diametre, actif: actif))
         .rotationEffect(.degrees(-8))
         .saturation(actif ? 1 : 0.35)
-        .opacity(actif ? 1 : 0.75)
         .disabled(!actif)
         .keyframeAnimator(initialValue: 0.0, trigger: actif) { bouton, angle in
             bouton.rotationEffect(.degrees(actif && !reduire ? angle : 0))
@@ -558,6 +563,7 @@ struct BoutonCochon: View {
 
 private struct StyleCochon: ButtonStyle {
     let diametre: CGFloat
+    let actif: Bool
 
     func makeBody(configuration: Configuration) -> some View {
         let enfonce = configuration.isPressed
@@ -569,6 +575,8 @@ private struct StyleCochon: ButtonStyle {
                     .overlay(Circle().strokeBorder(
                         LinearGradient(colors: [.white.opacity(0.4), .clear, .clear, Palette.cochonOmbre],
                                        startPoint: .top, endPoint: .bottom), lineWidth: 6))
+                    // Éteint : seul le disque s'assombrit, le texte reste blanc.
+                    .brightness(actif ? 0 : -0.2)
             }
             .offset(y: enfonce ? 4 : 0)
             .background { Circle().fill(Palette.framboiseSocle).offset(y: 6) }

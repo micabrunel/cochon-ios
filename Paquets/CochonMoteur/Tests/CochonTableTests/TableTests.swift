@@ -1,5 +1,8 @@
 import CochonMoteur
 @testable import CochonTable
+#if canImport(CoreGraphics)
+import CoreGraphics
+#endif
 import Foundation
 import XCTest
 
@@ -48,6 +51,69 @@ final class PlacesEtDispositionTests: XCTestCase {
             XCTAssertGreaterThanOrEqual(p.centre.y - p.taille.height / 2, -1)
             XCTAssertLessThanOrEqual(p.centre.y + p.taille.height / 2, taille.height + 1)
         }
+    }
+
+    /// Relecture #4 (B1) : mon « +1 » de pénalité ne recoupe aucune carte
+    /// de ma main (bordure jaune et carte soulevée comprises), ni au départ
+    /// ni pendant l'envol, ni l'étiquette « Toi », ni le bouton COCHON!.
+    func testMonPlusUnNeRecoupeNiMaMainNiToiNiCochon() {
+        // Zones sûres : maquette (iPhone 14/15), 15 Pro, 16 Pro, Pro Max.
+        let tailles = [CGSize(width: 390, height: 763), CGSize(width: 393, height: 759),
+                       CGSize(width: 402, height: 778), CGSize(width: 430, height: 839)]
+        for taille in tailles {
+            let d = Disposition(taille: taille, moi: 0, nombreJoueurs: 4)
+            let depart = rect(d.plusUn(.bas), d.taillePlusUn)
+            let fin = depart.offsetBy(dx: d.envolPlusUn(.bas).width, dy: d.envolPlusUn(.bas).height)
+            let plusUn = depart.union(fin)
+            XCTAssertGreaterThanOrEqual(plusUn.minX, 0, "\(taille)")
+            XCTAssertLessThanOrEqual(plusUn.maxX, taille.width, "\(taille)")
+
+            for n in 1...9 {
+                for i in 0..<n {
+                    let p = d.pose(.main(joueur: 0, emplacement: i), tailleMain: n)
+                    // Bordure jaune de 3 pt autour de la carte (TableVue.cartes).
+                    let posee = enveloppe(p.centre, CGSize(width: p.taille.width + 6, height: p.taille.height + 6), p.rotation)
+                    // Carte soulevée : agrandie de 12 %, montée de 16 pt, droite.
+                    let soulevee = rect(CGPoint(x: p.centre.x, y: p.centre.y - 16 * d.echelle),
+                                        CGSize(width: (p.taille.width + 6) * 1.12, height: (p.taille.height + 6) * 1.12))
+                    XCTAssertFalse(plusUn.intersects(posee), "\(taille), \(n) cartes, carte \(i)")
+                    XCTAssertFalse(plusUn.intersects(soulevee), "\(taille), \(n) cartes, carte \(i) soulevée")
+                }
+            }
+
+            // Étiquette « Toi » : au plus 90 pt de large (pastille du tour
+            // comprise), agrandie de 6 % quand c'est mon tour.
+            let toi = rect(d.etiquette(.bas), CGSize(width: 90 * 1.06, height: 30))
+            XCTAssertFalse(plusUn.intersects(toi), "\(taille) : étiquette « Toi »")
+
+            // Bouton COCHON! : anneaux blanc et jaune de 9 pt autour du disque.
+            let r = d.diametreCochon / 2 + 9
+            let proche = CGPoint(x: min(max(d.boutonCochon.x, plusUn.minX), plusUn.maxX),
+                                 y: min(max(d.boutonCochon.y, plusUn.minY), plusUn.maxY))
+            XCTAssertGreaterThan(hypot(proche.x - d.boutonCochon.x, proche.y - d.boutonCochon.y), r, "\(taille) : COCHON!")
+        }
+    }
+
+    func testLePlusUnDUnOrdiResteAuDessusDeSonEtiquette() {
+        let d = Disposition(taille: CGSize(width: 390, height: 763), moi: 0, nombreJoueurs: 4)
+        for place in [Place.gauche, .haut, .droite] {
+            XCTAssertLessThan(d.plusUn(place).y, d.etiquette(place).y)
+            XCTAssertLessThan(d.envolPlusUn(place).height, 0, "il monte")
+        }
+        XCTAssertEqual(d.envolPlusUn(.bas).height, 0, "le mien glisse à droite, sans traverser ma main")
+        XCTAssertGreaterThan(d.envolPlusUn(.bas).width, 0)
+    }
+
+    private func rect(_ c: CGPoint, _ t: CGSize) -> CGRect {
+        CGRect(x: c.x - t.width / 2, y: c.y - t.height / 2, width: t.width, height: t.height)
+    }
+
+    /// Rectangle englobant d'un rectangle tourné de `degres` autour de son centre.
+    private func enveloppe(_ c: CGPoint, _ t: CGSize, _ degres: Double) -> CGRect {
+        let a = abs(degres) * .pi / 180
+        let l = t.width * CGFloat(cos(a)) + t.height * CGFloat(sin(a))
+        let h = t.width * CGFloat(sin(a)) + t.height * CGFloat(cos(a))
+        return rect(c, CGSize(width: l, height: h))
     }
 
     func testLaCarteTenueParUnOrdiVientDeSonCote() {
