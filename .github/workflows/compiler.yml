@@ -4,8 +4,19 @@
 # Tourne sur un Mac auto-hébergé (le Mac de Michael, voir
 # scripts/installer-runner-mac.sh) : les Mac hébergés de GitHub sont
 # payants pour un dépôt privé, et Michael ne paie aucun service
-# d'infrastructure. Sans Mac en ligne, le travail reste en file d'attente
-# (jaune), il ne passe pas au rouge.
+# d'infrastructure.
+#
+# Sans Mac en ligne, le travail reste en file d'attente (jaune), mais
+# GitHub l'annule au bout de 24 h : le check passe alors en « cancelled »,
+# sans qu'aucun code n'ait été compilé. Conséquences :
+#   - ce check (« App iPhone (macOS) ») ne doit PAS être obligatoire dans
+#     la protection de branche tant que le Mac n'est pas en ligne en
+#     permanence (sinon les PR restent bloquées ou passent sur un annulé) ;
+#   - un run annulé après 24 h se relance à la main quand le Mac est en
+#     ligne : `gh run rerun <id>` ou `gh workflow run compiler.yml --ref <branche>`
+#     (déclencheur `workflow_dispatch` ci-dessous).
+# `timeout-minutes` ne compte qu'à partir du démarrage sur le runner : il
+# ne raccourcit pas l'attente en file.
 
 name: Compiler
 

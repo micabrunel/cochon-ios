@@ -24,6 +24,9 @@ public struct ConfigPartie: Codable, Equatable, Sendable {
     public static let cartesParJoueur = 4
     public static let cartesRegardeesAuDebut = 2
     public static let joueursPossibles = 2...4
+    /// Valeurs admises pour `minuteur` (en plus de `nil`). Toute autre
+    /// valeur est refusée par `Moteur.nouvellePartie` (`.minuteurInvalide`).
+    public static let minuteursPossibles: Set<Int> = [15, 30, 60]
 
     public init(nombreJoueurs: Int, premierJoueur: Int = 0, minuteur: Int? = nil) {
         self.nombreJoueurs = nombreJoueurs

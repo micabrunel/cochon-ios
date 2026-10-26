@@ -26,6 +26,10 @@ final class PartieModele {
 
     @ObservationIgnored private var ordinateurs: [Ordinateur] = []
     @ObservationIgnored private var tache: Task<Void, Never>?
+    /// Masquages différés de `revele`, un par emplacement. Annulés à chaque
+    /// nouvelle manche : sinon une tâche de la manche précédente masquerait
+    /// un emplacement de la suivante.
+    @ObservationIgnored private var masquages: [Int: Task<Void, Never>] = [:]
 
     init() {
         // Remplacé tout de suite par `nouvelleManche()`.
@@ -37,6 +41,8 @@ final class PartieModele {
 
     func nouvelleManche() {
         tache?.cancel()
+        masquages.values.forEach { $0.cancel() }
+        masquages = [:]
         let graine = UInt64.random(in: 0...UInt64.max)
         do {
             etat = try Moteur.nouvellePartie(config: ConfigPartie(nombreJoueurs: nombreJoueurs), graine: graine)
@@ -95,9 +101,15 @@ final class PartieModele {
 
     private func montrerUnInstant(_ emplacement: Int) {
         revele.insert(emplacement)
-        Task { [weak self] in
+        // Un seul masquage en cours par emplacement : le dernier gagne.
+        masquages[emplacement]?.cancel()
+        masquages[emplacement] = Task { [weak self] in
             try? await Task.sleep(nanoseconds: 1_500_000_000)
+            // `try?` avale l'annulation : sans ce test, une tâche annulée
+            // masquerait quand même l'emplacement.
+            if Task.isCancelled { return }
             self?.revele.remove(emplacement)
+            self?.masquages[emplacement] = nil
         }
     }
 

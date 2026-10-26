@@ -34,6 +34,8 @@ public struct Action: Codable, Equatable, Hashable, Sendable {
 
 public enum ErreurMoteur: Error, Equatable, Sendable {
     case nombreJoueursInvalide
+    /// Minuteur hors de `ConfigPartie.minuteursPossibles` (15, 30, 60 s ou aucun).
+    case minuteurInvalide
     case joueurInconnu
     case pasTonTour
     case coupHorsPhase

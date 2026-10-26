@@ -47,6 +47,28 @@ invitations.**
   sérialisables, rejeu déterministe, ouverture simultanée, `numeroCoup`,
   événements sans face privée, IA qui ne lit que la vue.
 
+## Points à trancher
+
+Relevés à la relecture de la PR #1 (Gilles). Rien n'est implémenté ; à
+décider avant d'écrire le serveur.
+
+- **R2 — `numeroCoup` et ouverture simultanée.** La règle « un coup en
+  retard (numéro dépassé) est refusé » entre en conflit avec l'ouverture :
+  chaque regard incrémente `numeroCoup`, donc deux joueurs qui regardent
+  en même temps verront le second refusé alors que son coup est légal.
+  Pistes : (a) exempter les coups `regarder` de la phase d'ouverture du
+  contrôle de numéro (le moteur les valide déjà : emplacement, doublon,
+  limite de 2) ; (b) tenir un numéro par joueur au lieu d'un numéro
+  global ; (c) ne refuser que si le coup n'est plus légal après rejeu,
+  sans contrôle de numéro. À trancher avec le protocole WebSocket.
+- **R6 — le serveur ne décode jamais un `EtatPartie` venu d'un client.**
+  Seuls des `Action` (coups) et des `JournalPartie` (reprise) sont acceptés
+  en entrée, et un journal est toujours **rejoué** par `rejouer()` (qui
+  revalide config, minuteur et chaque coup). Un `EtatPartie` incohérent
+  (par exemple une taille de `connues` différente du nombre de joueurs)
+  ferait planter `vue(pour:)` : il ne doit exister que côté arbitre,
+  construit par le moteur. À garder comme règle de revue du serveur.
+
 Limite à connaître : le jeu en ligne dépendra de la disponibilité du
 cluster et de la connexion de la maison. Si cela devient gênant, le même
 conteneur se déplace ailleurs sans changer l'application.
