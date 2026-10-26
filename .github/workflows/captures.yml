@@ -25,6 +25,17 @@ on:
       graine:
         description: "Graine du mode démo"
         default: "2026"
+      simulateur:
+        description: "Modèle d'iPhone (vide = iPhone 17 Pro), ex. « iPhone 16e », « iPhone 17 Pro Max »"
+        default: ""
+      texte:
+        description: "Taille du texte (Dynamic Type)"
+        type: choice
+        options: [large, extra-extra-extra-large, accessibility-medium, accessibility-large, accessibility-extra-extra-extra-large]
+        default: large
+      seulement:
+        description: "Écrans à capturer (vide = tous), ex. « parametres menu »"
+        default: ""
   pull_request:
     paths:
       - "Cochon/**"
@@ -35,7 +46,8 @@ on:
       - ".github/workflows/captures.yml"
 
 concurrency:
-  group: captures-${{ github.ref }}
+  # Plusieurs modèles / tailles de texte en parallèle sur la même branche.
+  group: captures-${{ github.ref }}-${{ inputs.simulateur }}-${{ inputs.texte }}-${{ inputs.seulement }}
   cancel-in-progress: true
 
 permissions:
@@ -61,13 +73,16 @@ jobs:
         shell: bash
         env:
           GRAINE: ${{ inputs.graine || '2026' }}
+          SIMULATEUR: ${{ inputs.simulateur }}
+          TEXTE: ${{ inputs.texte || 'large' }}
+          SEULEMENT: ${{ inputs.seulement }}
         run: scripts/captures-ecrans.sh
 
       - name: Publier les captures
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: captures
+          name: captures${{ inputs.simulateur && format('-{0}', inputs.simulateur) || '' }}${{ inputs.texte && inputs.texte != 'large' && format('-{0}', inputs.texte) || '' }}
           path: captures/
           if-no-files-found: warn
           retention-days: 30

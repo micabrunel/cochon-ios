@@ -18,6 +18,10 @@
 #   GRAINE=2026                  graine du mode démo
 #   ATTENTE=3                    secondes entre le lancement et la capture
 #   SORTIE=captures              dossier des images
+#   TEXTE=large                  taille du texte (Dynamic Type) du simulateur :
+#                                large (défaut iOS), extra-extra-extra-large,
+#                                accessibility-medium … accessibility-extra-extra-extra-large
+#   SEULEMENT="parametres menu"  ne capturer que ces écrans (numéros d'origine gardés)
 #
 # Utilisé tel quel par le flux CI « Captures » (.github/workflows/captures.yml).
 
@@ -31,6 +35,8 @@ BUNDLE=com.micabrunel.cochon
 GRAINE="${GRAINE:-2026}"
 ATTENTE="${ATTENTE:-3}"
 SORTIE="${SORTIE:-captures}"
+TEXTE="${TEXTE:-large}"
+SEULEMENT="${SEULEMENT:-}"
 CONSTRUCTION=build/captures
 
 erreur() { echo "✗ $*" >&2; exit 1; }
@@ -39,6 +45,13 @@ erreur() { echo "✗ $*" >&2; exit 1; }
 command -v xcodebuild >/dev/null || erreur "Xcode absent (xcodebuild introuvable)."
 [[ "$GRAINE" =~ ^[0-9]+$ ]] || erreur "GRAINE doit être un nombre entier (reçu : $GRAINE)."
 [[ "$ATTENTE" =~ ^[0-9]+$ ]] || erreur "ATTENTE doit être un nombre entier de secondes (reçu : $ATTENTE)."
+[[ "$TEXTE" =~ ^(extra-small|small|medium|large|extra-large|extra-extra-large|extra-extra-extra-large|accessibility-(medium|large|extra-large|extra-extra-large|extra-extra-extra-large))$ ]] \
+  || erreur "TEXTE inconnu (reçu : $TEXTE). Exemples : large, extra-extra-extra-large, accessibility-large."
+VOULUS=()
+for e in $SEULEMENT; do
+  [[ " ${ECRANS[*]} " == *" $e "* ]] || erreur "SEULEMENT : écran inconnu « $e » (écrans : ${ECRANS[*]})."
+  VOULUS+=("$e")
+done
 if ! command -v xcodegen >/dev/null; then
   command -v brew >/dev/null || erreur "xcodegen absent, et Homebrew aussi : brew.sh puis « brew install xcodegen »."
   echo "→ Installation de xcodegen"
@@ -73,7 +86,9 @@ xcrun simctl ui "$UDID" appearance light 2>/dev/null || true
 # Barre d'état propre et identique d'une fois sur l'autre.
 xcrun simctl status_bar "$UDID" override --time 9:41 --dataNetwork wifi --wifiMode active --wifiBars 3 \
   --cellularMode active --cellularBars 4 --batteryState charged --batteryLevel 100 2>/dev/null || true
-trap 'xcrun simctl status_bar "$UDID" clear 2>/dev/null || true' EXIT
+xcrun simctl ui "$UDID" content_size "$TEXTE" || erreur "taille de texte refusée par le simulateur : $TEXTE"
+echo "→ Taille du texte : $TEXTE"
+trap 'xcrun simctl status_bar "$UDID" clear 2>/dev/null || true; xcrun simctl ui "$UDID" content_size large 2>/dev/null || true' EXIT
 
 # --- 2. Construction ---------------------------------------------------------
 
@@ -107,13 +122,16 @@ rm -rf "$SORTIE"
 mkdir -p "$SORTIE"
 echo "→ Captures (graine $GRAINE) dans $SORTIE/"
 i=0
+n=0
 for ecran in "${ECRANS[@]}"; do
   i=$((i + 1))
+  if [ "${#VOULUS[@]}" -gt 0 ] && [[ " ${VOULUS[*]} " != *" $ecran "* ]]; then continue; fi
+  n=$((n + 1))
   fichier="$(printf '%02d-%s.png' "$i" "$ecran")"
   xcrun simctl terminate "$UDID" "$BUNDLE" >/dev/null 2>&1 || true
   xcrun simctl launch "$UDID" "$BUNDLE" -ecran "$ecran" -graine "$GRAINE" >/dev/null
   # Premier lancement : polices et caches à charger.
-  if [ "$i" -eq 1 ]; then sleep $((ATTENTE + 3)); else sleep "$ATTENTE"; fi
+  if [ "$n" -eq 1 ]; then sleep $((ATTENTE + 3)); else sleep "$ATTENTE"; fi
   xcrun simctl io "$UDID" screenshot --type=png "$SORTIE/$fichier" >/dev/null 2>&1
   [ -s "$SORTIE/$fichier" ] || erreur "capture vide : $fichier"
   echo "   $fichier"
@@ -123,17 +141,17 @@ xcrun simctl terminate "$UDID" "$BUNDLE" >/dev/null 2>&1 || true
 # --- 4. Planche récapitulative ----------------------------------------------
 
 images=("$SORTIE"/[0-9][0-9]-*.png)
-[ "${#images[@]}" -eq "${#ECRANS[@]}" ] || erreur "${#images[@]} captures pour ${#ECRANS[@]} écrans."
+[ "${#images[@]}" -eq "$n" ] || erreur "${#images[@]} captures pour $n écrans."
 
 echo "→ Planche : $SORTIE/planche.png"
-xcrun swift scripts/planche.swift "$SORTIE/planche.png" "COCHON! — $NOM — graine $GRAINE" "${images[@]}"
+xcrun swift scripts/planche.swift "$SORTIE/planche.png" "COCHON! — $NOM — texte $TEXTE — graine $GRAINE" "${images[@]}"
 
 {
   echo '<!doctype html><meta charset="utf-8"><title>COCHON! — captures</title>'
   echo '<style>body{font:15px -apple-system,sans-serif;background:#fff3f6;margin:24px}'
   echo 'main{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:20px}'
   echo 'figure{margin:0}img{width:100%;border-radius:18px;box-shadow:0 4px 14px #0002}figcaption{margin-top:6px}</style>'
-  echo "<h1>COCHON! — $NOM — graine $GRAINE</h1><main>"
+  echo "<h1>COCHON! — $NOM — texte $TEXTE — graine $GRAINE</h1><main>"
   for f in "${images[@]}"; do
     b="$(basename "$f")"
     echo "<figure><a href=\"$b\"><img src=\"$b\" alt=\"${b%.png}\"></a><figcaption>${b%.png}</figcaption></figure>"
