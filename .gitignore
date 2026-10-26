@@ -1,0 +1,12 @@
+# Projet généré par XcodeGen : jamais versionné.
+*.xcodeproj/
+*.xcworkspace/
+!Paquets/**/*.xcworkspace/
+DerivedData/
+build/
+.build/
+.swiftpm/
+xcuserdata/
+Config/Local.xcconfig
+*.p8
+.DS_Store
