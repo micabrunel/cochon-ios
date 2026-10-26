@@ -118,6 +118,8 @@ final class PlacesEtDispositionTests: XCTestCase {
         XCTAssertEqual(gauche.minX, 6, accuracy: 0.001)
         XCTAssertEqual(droite.maxX, 390 - 6, accuracy: 0.001)
         XCTAssertEqual(gauche.midY, d.etiquette(.gauche).y, accuracy: 0.001, "même hauteur")
+        // « Toi » reste posée sous la zone sûre, comme sur la maquette.
+        XCTAssertEqual(d.centreDansEcran(d.etiquette(.bas), taille: grande).y, d.etiquette(.bas).y)
         // Plus large que l'écran : centrée.
         XCTAssertEqual(d.centreDansEcran(d.etiquette(.gauche), taille: CGSize(width: 500, height: 30)).x, 195)
     }

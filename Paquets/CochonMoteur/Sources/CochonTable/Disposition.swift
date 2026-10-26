@@ -114,18 +114,16 @@ public struct Disposition: Sendable {
         }
     }
 
-    /// Centre d'un élément de `taille` voulu en `centre`, ramené dans l'écran
-    /// (à `marge` des bords) quand il déborderait. Les étiquettes « ORDI 1 »
-    /// et « ORDI 3 » sont posées près des bords et grandissent avec le texte :
-    /// elles glissent vers l'intérieur au lieu d'être coupées. Plus large que
-    /// l'écran : centré.
+    /// Centre d'un élément de `taille` voulu en `centre`, ramené entre les
+    /// bords gauche et droit de l'écran (à `marge`) quand il déborderait. Les
+    /// étiquettes « ORDI 1 » et « ORDI 3 » sont posées près des bords et
+    /// grandissent avec le texte : elles glissent vers l'intérieur au lieu
+    /// d'être coupées. Plus large que l'écran : centré. La hauteur n'est pas
+    /// bornée : l'étiquette « Toi » est posée exprès sous la zone sûre.
     public func centreDansEcran(_ centre: CGPoint, taille t: CGSize, marge: CGFloat = 6) -> CGPoint {
-        func borne(_ v: CGFloat, _ demi: CGFloat, _ total: CGFloat) -> CGFloat {
-            let bas = marge + demi, haut = total - marge - demi
-            return bas > haut ? total / 2 : min(max(v, bas), haut)
-        }
-        return CGPoint(x: borne(centre.x, t.width / 2, taille.width),
-                       y: borne(centre.y, t.height / 2, taille.height))
+        let gauche = marge + t.width / 2, droite = taille.width - marge - t.width / 2
+        let x = gauche > droite ? taille.width / 2 : min(max(centre.x, gauche), droite)
+        return CGPoint(x: x, y: centre.y)
     }
 
     // MARK: - « +1 » de pénalité
