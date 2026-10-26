@@ -6,6 +6,7 @@ import SwiftUI
 struct CalqueAnnonces: View {
     let modele: TableModele
     let d: Disposition
+    @Environment(\.accessibilityReduceMotion) var reduire
 
     var body: some View {
         ZStack {
@@ -21,7 +22,7 @@ struct CalqueAnnonces: View {
                 default:
                     Bulle(texte: Textes.annonce(a.annonce, moi: modele.moi), ton: ton(a.annonce))
                         .position(x: d.centreTable.x, y: d.centreTable.y - 118 * d.echelle)
-                        .transition(.opacity.combined(with: .scale(scale: 0.92)))
+                        .transition(.apparition(echelle: 0.92, reduire: reduire))
                 }
             }
         }
@@ -73,7 +74,7 @@ struct PlusUn: View {
             .foregroundStyle(Palette.jaune)
             .shadow(color: Palette.framboiseSocle, radius: 0, x: 0, y: 3)
             .offset(y: parti && !reduire ? -36 : 0)
-            .scaleEffect(parti ? 1 : 0.7)
+            .scaleEffect(parti || reduire ? 1 : 0.7)
             .opacity(parti ? 0 : 1)
             .onAppear {
                 withAnimation(.timingCurve(0.23, 1, 0.32, 1, duration: 1.0).delay(0.1)) { parti = true }

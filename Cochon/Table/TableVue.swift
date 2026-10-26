@@ -44,7 +44,7 @@ struct TableVue: View {
             }
             if modele.resultatsVisibles {
                 ResultatsVue(vue: modele.vue, rejouer: rejouer, accueil: quitter)
-                    .transition(.opacity.combined(with: .scale(scale: 0.96)))
+                    .transition(.apparition(echelle: 0.96, reduire: reduire))
             }
         }
         .sensoryFeedback(trigger: modele.impulsion) { _, nouvelle in
@@ -240,7 +240,7 @@ struct TableVue: View {
             }
             .buttonStyle(.bonbonVert)
             .position(d.boutonRemplacer)
-            .transition(.opacity.combined(with: .scale(scale: 0.95)))
+            .transition(.apparition(echelle: 0.95, reduire: reduire))
         }
         if c.defausserVisible {
             Button { modele.geste(.boutonDefausser) } label: {
@@ -248,7 +248,7 @@ struct TableVue: View {
             }
             .buttonStyle(.bonbonBleu)
             .position(d.boutonDefausser)
-            .transition(.opacity.combined(with: .scale(scale: 0.95)))
+            .transition(.apparition(echelle: 0.95, reduire: reduire))
         }
         if c.finDuTourVisible {
             Button { modele.geste(.finDuTour) } label: {
@@ -257,7 +257,7 @@ struct TableVue: View {
             }
             .buttonStyle(.bonbonBleu)
             .position(d.m(195, 598))
-            .transition(.opacity.combined(with: .scale(scale: 0.95)))
+            .transition(.apparition(echelle: 0.95, reduire: reduire))
         }
     }
 
@@ -281,6 +281,7 @@ struct TableVue: View {
 struct Banniere: View {
     let banniere: Textes.Banniere
     let appels: Int
+    @Environment(\.accessibilityReduceMotion) var reduire
 
     var body: some View {
         let face = banniere.aMoi ? Palette.turquoise : Palette.framboise
@@ -315,7 +316,7 @@ struct Banniere: View {
         }
         .animation(Courbe.sortie(0.25), value: banniere)
         .keyframeAnimator(initialValue: 1.0, trigger: appels) { contenu, echelle in
-            contenu.scaleEffect(echelle)
+            contenu.scaleEffect(reduire ? 1 : echelle)
         } keyframes: { _ in
             KeyframeTrack {
                 SpringKeyframe(1.06, duration: 0.18, spring: .snappy)
@@ -358,7 +359,7 @@ struct EtiquetteJoueur: View {
         .padding(.vertical, 3)
         .background(Capsule().fill(.white))
         .background(Capsule().fill(Palette.framboiseTexte).offset(y: 3))
-        .scaleEffect(actif ? 1.06 : 1)
+        .scaleEffect(actif && !reduire ? 1.06 : 1)
         .animation(Courbe.sortie(0.25), value: actif)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(nom), \(cartes) carte\(cartes > 1 ? "s" : "")\(actif ? ", joue" : "")")
@@ -392,6 +393,7 @@ struct EtiquetteJoueur: View {
 struct Projecteur: View {
     let modele: TableModele
     let d: Disposition
+    @Environment(\.accessibilityReduceMotion) var reduire
 
     var body: some View {
         let v = modele.vue
@@ -402,8 +404,10 @@ struct Projecteur: View {
                                  startRadius: 0, endRadius: 80 * d.echelle))
             .frame(width: 180 * d.echelle, height: 110 * d.echelle)
             .position(centre)
+            // Réduire les animations : le halo ne glisse pas, il change de
+            // place d'un coup (le fondu d'apparition reste).
+            .animation(reduire ? nil : Courbe.vol(0.5), value: v.actif)
             .opacity(visible ? 1 : 0)
-            .animation(Courbe.vol(0.5), value: v.actif)
             .animation(Courbe.sortie(0.3), value: visible)
             .allowsHitTesting(false)
             .accessibilityHidden(true)
@@ -522,6 +526,7 @@ struct BoutonCochon: View {
     let actif: Bool
     let diametre: CGFloat
     let action: () -> Void
+    @Environment(\.accessibilityReduceMotion) var reduire
 
     var body: some View {
         Button(action: action) {
@@ -537,7 +542,7 @@ struct BoutonCochon: View {
         .opacity(actif ? 1 : 0.75)
         .disabled(!actif)
         .keyframeAnimator(initialValue: 0.0, trigger: actif) { bouton, angle in
-            bouton.rotationEffect(.degrees(actif ? angle : 0))
+            bouton.rotationEffect(.degrees(actif && !reduire ? angle : 0))
         } keyframes: { _ in
             KeyframeTrack {
                 CubicKeyframe(-6, duration: 0.08)

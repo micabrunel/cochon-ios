@@ -166,7 +166,11 @@ pendant la partie : les flèches du centre et la pastille du joueur actif.
   toutes les durées.
 - **Réduire les animations** (réglage iOS) : aucune carte ne vole ni ne se
   soulève (changement de place immédiat), les retournements deviennent des
-  fondus de 0,2 s, flèches, rayons, pastille et indice ne bougent plus. Les
+  fondus de 0,2 s, flèches, rayons, pastille et indice ne bougent plus ; le
+  bandeau ne rebondit plus, le bouton COCHON! ne frétille plus, le halo du
+  joueur actif change de place sans glisser, les étiquettes et le « +1 » ne
+  grossissent plus, les apparitions sont des fondus seuls. Seul reste
+  l'enfoncement des boutons sous le doigt (réponse directe au geste). Les
   **pauses restent** : le tour des ordis reste lisible.
 - Toutes les durées sont dans `CochonTable/Rythme.swift` et
   `Choregraphie.swift`, testées sous Linux.

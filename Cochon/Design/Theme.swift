@@ -97,6 +97,14 @@ enum Courbe {
     static func distribution(_ d: Double) -> Animation { .spring(duration: d, bounce: 0.18) }
 }
 
+extension AnyTransition {
+    /// Apparition d'un élément : fondu + léger grossissement, ou fondu
+    /// seul quand « Réduire les animations » est actif.
+    static func apparition(echelle: CGFloat, reduire: Bool) -> AnyTransition {
+        reduire ? .opacity : .opacity.combined(with: .scale(scale: echelle))
+    }
+}
+
 // MARK: - Relief « bonbon »
 
 /// Bouton en relief de la maquette : face, bande sombre en bas, reflet

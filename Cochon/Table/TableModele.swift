@@ -120,7 +120,7 @@ final class TableModele {
             attenteRemplacement = true
             vibrer(.selection)
         case .choisirValet(let i):
-            withAnimation(Courbe.sortie(rythme.dureeAnimation(.soulevement))) {
+            withAnimation(animation(.soulevement)) {
                 if let ancien = valetMien { plateau.appliquer(.soulever(joueur: moi, emplacement: ancien, false)) }
                 plateau.appliquer(.soulever(joueur: moi, emplacement: i, true))
             }
