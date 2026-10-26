@@ -26,6 +26,9 @@ concurrency:
   group: testflight
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
   envoyer:
     runs-on: [self-hosted, macOS]
@@ -59,12 +62,14 @@ jobs:
           command -v xcodegen >/dev/null || brew install xcodegen
           xcodegen generate
 
+      # Verdict = code de sortie de xcodebuild (bash -eo pipefail).
       - name: Archiver (signature par Apple)
+        shell: bash
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
         run: |
-          set -o pipefail
+          set -euo pipefail
           xcodebuild archive \
             -project Cochon.xcodeproj \
             -scheme Cochon \
@@ -76,15 +81,15 @@ jobs:
             -authenticationKeyID "$ASC_KEY_ID" \
             -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
             CURRENT_PROJECT_VERSION=${{ github.run_number }} \
-            2>&1 | tee archive.log | grep -E "error:|ARCHIVE (SUCCEEDED|FAILED)" || true
-          grep -q "ARCHIVE SUCCEEDED" archive.log
+            2>&1 | tee archive.log
 
       - name: Exporter et envoyer à App Store Connect
+        shell: bash
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
         run: |
-          set -o pipefail
+          set -euo pipefail
           cat > "$RUNNER_TEMP/export.plist" <<'EOF'
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -105,13 +110,16 @@ jobs:
             -authenticationKeyPath "$RUNNER_TEMP/cle.p8" \
             -authenticationKeyID "$ASC_KEY_ID" \
             -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
-            2>&1 | tee export.log | grep -E "error:|EXPORT (SUCCEEDED|FAILED)|Upload" || true
-          grep -q "EXPORT SUCCEEDED" export.log
+            2>&1 | tee export.log
           echo "Build ${{ github.run_number }} envoyé : il apparaît dans TestFlight après le traitement d'Apple (10 à 30 min)."
 
       - name: Journal en cas d'échec
         if: failure()
-        run: tail -120 archive.log export.log 2>/dev/null || true
+        shell: bash
+        run: |
+          for f in archive.log export.log; do
+            if [ -f "$f" ]; then tail -120 "$f"; fi
+          done
 
       - name: Effacer la clé
         if: always()

@@ -30,17 +30,27 @@ jobs:
       - name: Version de Swift
         run: swift --version
 
+      # Le verdict vient du CODE DE SORTIE de `swift test` (non nul sur
+      # un test en échec comme sur un plantage), jamais d'un grep sur le
+      # journal : `shell: bash` = bash -eo pipefail, et aucun `|| true`.
       - name: Tests (règles, IA, rejeu, sérialisation)
         working-directory: Paquets/CochonMoteur
+        shell: bash
         run: |
-          set -o pipefail
-          swift test 2>&1 | tee tests.log | grep -aE "error:|failed|Executed|victoires" || true
-          # Les échecs en annotations, lisibles sans ouvrir le journal.
-          (grep -aE "error:" tests.log | head -10 | while read -r l; do echo "::error title=Test::$l"; done) || true
-          grep -aE "victoires" tests.log | while read -r l; do echo "::notice title=Malin contre facile::$l"; done
-          grep -aqE "Executed [0-9]+ tests, with 0 failures" tests.log
-          ! grep -aqE "Executed [0-9]+ tests, with [1-9][0-9]* failures" tests.log
+          set -euo pipefail
+          swift test 2>&1 | tee tests.log
 
-      - name: Journal complet en cas d'échec
+      # Confort de lecture seulement : ces étapes ne décident de rien.
+      - name: Ordinateur malin contre facile
+        if: success()
+        working-directory: Paquets/CochonMoteur
+        shell: bash
+        run: awk '/victoires/ { print "::notice title=Malin contre facile::" $0 }' tests.log
+
+      - name: Échecs en annotations et journal complet
         if: failure()
-        run: tail -200 Paquets/CochonMoteur/tests.log || true
+        working-directory: Paquets/CochonMoteur
+        shell: bash
+        run: |
+          awk '/error:|Fatal error|signal/ && n++ < 10 { print "::error title=Test::" $0 }' tests.log
+          tail -200 tests.log

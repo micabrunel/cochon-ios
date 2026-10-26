@@ -33,21 +33,24 @@ jobs:
       - name: Xcode utilisé
         run: xcodebuild -version
 
+      # Verdict = code de sortie de `swift test` (voir moteur.yml).
       - name: Tests du moteur sur macOS
         working-directory: Paquets/CochonMoteur
+        shell: bash
         run: |
-          set -o pipefail
-          swift test 2>&1 | tee tests.log | grep -E "error:|failed|Executed" || true
-          grep -qE "Executed [0-9]+ tests, with 0 failures" tests.log
+          set -euo pipefail
+          swift test 2>&1 | tee tests.log
 
       - name: Générer le projet Xcode
         run: |
           command -v xcodegen >/dev/null || brew install xcodegen
           xcodegen generate
 
+      # Verdict = code de sortie de xcodebuild, pas un grep.
       - name: Compiler pour iPhone (sans signature)
+        shell: bash
         run: |
-          set -o pipefail
+          set -euo pipefail
           xcodebuild build \
             -project Cochon.xcodeproj \
             -scheme Cochon \
@@ -55,10 +58,14 @@ jobs:
             -destination 'generic/platform=iOS' \
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO \
-            2>&1 | tee build.log | grep -E "error:|warning: .*Cochon/|BUILD (SUCCEEDED|FAILED)" || true
-          (grep -E "error:" build.log | sort -u | head -8 | while read -r l; do echo "::error title=Compilation::$l"; done) || true
-          grep -q "BUILD SUCCEEDED" build.log
+            2>&1 | tee build.log
 
-      - name: Journal complet en cas d'échec
+      - name: Échecs en annotations et journaux
         if: failure()
-        run: tail -200 build.log || true
+        shell: bash
+        run: |
+          for f in Paquets/CochonMoteur/tests.log build.log; do
+            [ -f "$f" ] || continue
+            awk -v f="$f" '/error:|Fatal error/ && !vu[$0]++ && n++ < 8 { print "::error title=" f "::" $0 }' "$f"
+            tail -200 "$f"
+          done
