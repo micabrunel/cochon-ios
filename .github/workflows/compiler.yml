@@ -1,0 +1,71 @@
+# Compiler l'application pour iPhone, sans la signer, et rejouer les tests
+# du moteur sur macOS.
+#
+# Tourne sur un Mac auto-hébergé (le Mac de Michael, voir
+# scripts/installer-runner-mac.sh) : les Mac hébergés de GitHub sont
+# payants pour un dépôt privé, et Michael ne paie aucun service
+# d'infrastructure. Sans Mac en ligne, le travail reste en file d'attente
+# (jaune), il ne passe pas au rouge.
+
+name: Compiler
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: compiler-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  compiler:
+    name: App iPhone (macOS)
+    runs-on: [self-hosted, macOS]
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Xcode utilisé
+        run: xcodebuild -version
+
+      # Verdict = code de sortie de `swift test` (voir moteur.yml).
+      - name: Tests du moteur sur macOS
+        working-directory: Paquets/CochonMoteur
+        shell: bash
+        run: |
+          set -euo pipefail
+          swift test 2>&1 | tee tests.log
+
+      - name: Générer le projet Xcode
+        run: |
+          command -v xcodegen >/dev/null || brew install xcodegen
+          xcodegen generate
+
+      # Verdict = code de sortie de xcodebuild, pas un grep.
+      - name: Compiler pour iPhone (sans signature)
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild build \
+            -project Cochon.xcodeproj \
+            -scheme Cochon \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            2>&1 | tee build.log
+
+      - name: Échecs en annotations et journaux
+        if: failure()
+        shell: bash
+        run: |
+          for f in Paquets/CochonMoteur/tests.log build.log; do
+            [ -f "$f" ] || continue
+            awk -v f="$f" '/error:|Fatal error/ && !vu[$0]++ && n++ < 8 { print "::error title=" f "::" $0 }' "$f"
+            tail -200 "$f"
+          done

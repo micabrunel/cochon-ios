@@ -10,3 +10,6 @@ xcuserdata/
 Config/Local.xcconfig
 *.p8
 .DS_Store
+
+# Journaux des flux CI (tee).
+*.log

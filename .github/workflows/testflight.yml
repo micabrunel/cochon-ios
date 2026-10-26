@@ -1,0 +1,126 @@
+# Construire, signer et envoyer l'application sur TestFlight, sans ouvrir
+# Xcode. Calqué sur micabrunel/dermelia-scan-ios.
+#
+# À la demande (Actions › TestFlight › Run workflow). La signature est
+# gérée par Apple (« cloud signing ») à partir d'une clé d'API App Store
+# Connect, rôle Admin, posée en secrets du dépôt :
+#   ASC_KEY_ID      identifiant de la clé (10 caractères)
+#   ASC_ISSUER_ID   identifiant de l'émetteur (un UUID)
+#   ASC_KEY_P8      contenu du fichier AuthKey_XXXX.p8, tel quel
+# La clé n'est écrite que le temps du travail, dans le dossier temporaire
+# de l'exécuteur, et effacée à la fin quoi qu'il arrive.
+#
+# Prérequis côté Apple : l'app « COCHON! » (com.micabrunel.cochon) créée
+# dans App Store Connect, et l'identifiant d'équipe dans
+# Config/Signature.xcconfig.
+#
+# Le numéro de build est le numéro d'exécution du flux : chaque envoi a
+# le sien, sans commit pour l'incrémenter.
+
+name: TestFlight
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: testflight
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  envoyer:
+    runs-on: [self-hosted, macOS]
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Vérifier la configuration
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          manque=0
+          for v in ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8; do
+            [ -n "${!v}" ] || { echo "::error::secret $v absent"; manque=1; }
+          done
+          grep -Eq '^DEVELOPMENT_TEAM = [A-Z0-9]{10}$' Config/Signature.xcconfig \
+            || { echo "::error::identifiant d'équipe Apple absent de Config/Signature.xcconfig"; manque=1; }
+          exit $manque
+
+      - name: Poser la clé d'API
+        env:
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          umask 077
+          printf '%s\n' "$ASC_KEY_P8" > "$RUNNER_TEMP/cle.p8"
+
+      - name: Générer le projet Xcode
+        run: |
+          command -v xcodegen >/dev/null || brew install xcodegen
+          xcodegen generate
+
+      # Verdict = code de sortie de xcodebuild (bash -eo pipefail).
+      - name: Archiver (signature par Apple)
+        shell: bash
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          xcodebuild archive \
+            -project Cochon.xcodeproj \
+            -scheme Cochon \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/Cochon.xcarchive" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/cle.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            CURRENT_PROJECT_VERSION=${{ github.run_number }} \
+            2>&1 | tee archive.log
+
+      - name: Exporter et envoyer à App Store Connect
+        shell: bash
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/export.plist" <<'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict>
+          </plist>
+          EOF
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/Cochon.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/export.plist" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/cle.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            2>&1 | tee export.log
+          echo "Build ${{ github.run_number }} envoyé : il apparaît dans TestFlight après le traitement d'Apple (10 à 30 min)."
+
+      - name: Journal en cas d'échec
+        if: failure()
+        shell: bash
+        run: |
+          for f in archive.log export.log; do
+            if [ -f "$f" ]; then tail -120 "$f"; fi
+          done
+
+      - name: Effacer la clé
+        if: always()
+        run: rm -f "$RUNNER_TEMP/cle.p8"

@@ -1,0 +1,49 @@
+# Projet Xcode décrit en texte (XcodeGen), comme dermelia-scan-ios : le
+# .xcodeproj se régénère avec `xcodegen generate` et n'est pas versionné.
+
+name: Cochon
+options:
+  bundleIdPrefix: com.micabrunel
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+
+configFiles:
+  Debug: Config/Signature.xcconfig
+  Release: Config/Signature.xcconfig
+
+packages:
+  # Règles et ordinateur, en Swift pur, testés à part (aussi sous Linux).
+  CochonMoteur:
+    path: Paquets/CochonMoteur
+
+targets:
+  Cochon:
+    type: application
+    platform: iOS
+    sources:
+      - Cochon
+    info:
+      path: Cochon/Info.plist
+      properties:
+        CFBundleDisplayName: COCHON!
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        UIRequiresFullScreen: true
+        ITSAppUsesNonExemptEncryption: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.micabrunel.cochon
+        MARKETING_VERSION: "0.1"
+        CURRENT_PROJECT_VERSION: "1"
+        TARGETED_DEVICE_FAMILY: "1"
+        SWIFT_VERSION: "5.0"
+        CODE_SIGN_STYLE: Automatic
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    dependencies:
+      - package: CochonMoteur
+        product: CochonMoteur
+      - package: CochonMoteur
+        product: CochonIA

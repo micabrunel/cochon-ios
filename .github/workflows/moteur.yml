@@ -1,0 +1,56 @@
+# Tester le moteur de règles et l'ordinateur (paquet Swift pur) sous Linux,
+# sur les runners du cluster (label `cluster`), dans l'image Swift
+# officielle. Gratuit, rapide, et c'est le même code que fera tourner le
+# futur serveur multijoueur. Ce contrôle est obligatoire avant fusion.
+
+name: Moteur
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: moteur-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: Tests du moteur (Linux)
+    runs-on: [self-hosted, linux, cluster]
+    container: swift:6.1
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version de Swift
+        run: swift --version
+
+      # Le verdict vient du CODE DE SORTIE de `swift test` (non nul sur
+      # un test en échec comme sur un plantage), jamais d'un grep sur le
+      # journal : `shell: bash` = bash -eo pipefail, et aucun `|| true`.
+      - name: Tests (règles, IA, rejeu, sérialisation)
+        working-directory: Paquets/CochonMoteur
+        shell: bash
+        run: |
+          set -euo pipefail
+          swift test 2>&1 | tee tests.log
+
+      # Confort de lecture seulement : ces étapes ne décident de rien.
+      - name: Ordinateur malin contre facile
+        if: success()
+        working-directory: Paquets/CochonMoteur
+        shell: bash
+        run: awk '/victoires/ { print "::notice title=Malin contre facile::" $0 }' tests.log
+
+      - name: Échecs en annotations et journal complet
+        if: failure()
+        working-directory: Paquets/CochonMoteur
+        shell: bash
+        run: |
+          awk '/error:|Fatal error|signal/ && n++ < 10 { print "::error title=Test::" $0 }' tests.log
+          tail -200 tests.log
