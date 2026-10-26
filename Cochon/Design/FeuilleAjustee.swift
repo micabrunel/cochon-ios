@@ -16,7 +16,11 @@ struct FeuilleAjustee<Entete: View, Contenu: View>: View {
 
     @State private var hauteurEntete: CGFloat?
     @State private var hauteurContenu: CGFloat?
-    @State private var margeBas: CGFloat = 0
+    /// Écart entre la hauteur demandée au détent et la place réellement
+    /// donnée à la vue (zone de l'indicateur d'accueil, feuille flottante…).
+    /// Il dépend de l'iPhone et de la version d'iOS : on le mesure au lieu
+    /// de le deviner.
+    @State private var decalage: CGFloat?
 
     init(hauteurEstimee: CGFloat, @ViewBuilder entete: @escaping () -> Entete,
          @ViewBuilder contenu: @escaping () -> Contenu) {
@@ -25,14 +29,13 @@ struct FeuilleAjustee<Entete: View, Contenu: View>: View {
         self.contenu = contenu
     }
 
-    /// Hauteur de la feuille : en-tête + contenu + zone de l'indicateur
-    /// d'accueil (comprise dans la hauteur d'un détent `.height`).
     private var hauteur: CGFloat {
-        guard let hauteurEntete, let hauteurContenu else { return hauteurEstimee }
-        return (hauteurEntete + hauteurContenu + margeBas).rounded(.up)
+        guard let hauteurEntete, let hauteurContenu, let decalage else { return hauteurEstimee }
+        return (hauteurEntete + hauteurContenu + decalage).rounded(.up)
     }
 
     var body: some View {
+        let demandee = hauteur
         VStack(spacing: 0) {
             entete()
                 .fixedSize(horizontal: false, vertical: true)
@@ -43,7 +46,14 @@ struct FeuilleAjustee<Entete: View, Contenu: View>: View {
             }
             .scrollBounceBehavior(.basedOnSize)
         }
-        .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.bottom } action: { margeBas = $0 }
-        .presentationDetents([.height(hauteur)])
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { recue in
+            // On garde le plus petit écart observé : quand la feuille est
+            // plafonnée par l'écran (ou en cours d'animation), la place reçue
+            // est plus petite que demandée, l'écart calculé est trop grand ;
+            // il ne doit pas faire grandir la feuille à la mesure suivante.
+            let ecart = demandee - recue
+            decalage = min(decalage ?? ecart, ecart)
+        }
+        .presentationDetents([.height(demandee)])
     }
 }
