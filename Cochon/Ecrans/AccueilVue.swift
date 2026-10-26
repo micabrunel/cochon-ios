@@ -10,56 +10,88 @@ struct AccueilVue: View {
     let resume: String
     @State var arrive = false
     @Environment(\.accessibilityReduceMotion) var reduire
+    @Environment(\.dynamicTypeSize) private var tailleTexte
 
     var body: some View {
         ZStack {
             // Le seul endroit où les rayons tournent (lentement).
             FondFoire(centre: UnitPoint(x: 0.5, y: 0.34), rayonsTournent: true)
-            VStack(spacing: 18) {
-                Spacer()
-                Mascotte(taille: 150)
-                    .offset(y: arrive || reduire ? 0 : -30)
-                    .rotationEffect(.degrees(arrive || reduire ? -6 : 8))
-                Text("COCHON!")
-                    .font(Police.titre(64, .largeTitle))
-                    .foregroundStyle(.white)
-                    .shadow(color: Palette.framboiseSocle, radius: 0, x: 0, y: 6)
-                    .rotationEffect(.degrees(-4))
-                    .accessibilityAddTraits(.isHeader)
-                Text("Cache tes cartes, garde le plus petit total.")
-                    .font(Police.texte(17))
-                    .foregroundStyle(Palette.prune)
-                    .multilineTextAlignment(.center)
-                Spacer()
-                VStack(spacing: 14) {
-                    Button(action: jouer) {
-                        Text("Jouer").font(Police.titre(30)).frame(maxWidth: .infinity, minHeight: 66)
+            if tailleTexte.isAccessibilitySize {
+                // Aux tailles d'accessibilité, l'accueil ne tient plus sur un
+                // écran (« garde le plus pe… », « 3 ordis, niveau… ») : il
+                // défile au lieu de tronquer, centré quand il tient.
+                GeometryReader { geo in
+                    ScrollView {
+                        contenu(grand: true)
+                            .frame(maxWidth: .infinity, minHeight: geo.size.height)
                     }
-                    .buttonStyle(.bonbonVert)
-                    .accessibilityHint(resume)
-                    HStack(spacing: 14) {
-                        Button(action: regles) {
-                            Text("Règles").font(Police.titre(20)).frame(maxWidth: .infinity, minHeight: 52)
-                        }
-                        .buttonStyle(.bonbonBleu)
-                        Button(action: parametres) {
-                            Text("Paramètres").font(Police.titre(20)).foregroundStyle(Palette.jauneIcone)
-                                .frame(maxWidth: .infinity, minHeight: 52)
-                        }
-                        .buttonStyle(.bonbonJaune)
-                    }
-                    Text(resume)
-                        .font(Police.texte(14))
-                        .foregroundStyle(.white)
-                        .shadow(color: Palette.framboiseSocle.opacity(0.6), radius: 0, x: 0, y: 1)
+                    .scrollBounceBehavior(.basedOnSize)
                 }
-                .padding(.horizontal, 28)
-                .padding(.bottom, 24)
+            } else {
+                contenu(grand: false)
             }
         }
         .onAppear {
             withAnimation(reduire ? nil : .spring(duration: 0.6, bounce: 0.4)) { arrive = true }
         }
+    }
+
+    private func contenu(grand: Bool) -> some View {
+        VStack(spacing: 18) {
+            Spacer()
+            Mascotte(taille: grand ? 96 : 150)
+                .offset(y: arrive || reduire ? 0 : -30)
+                .rotationEffect(.degrees(arrive || reduire ? -6 : 8))
+            // Le logo grandit jusqu'au XXXL, pas au-delà, et se réduit
+            // plutôt que de devenir « COCH… » (sans `lineLimit(1)`, le
+            // facteur d'échelle ne joue pas : SwiftUI tronque d'abord).
+            Text("COCHON!")
+                .font(Police.titre(64, .largeTitle))
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+                .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+                .foregroundStyle(.white)
+                .shadow(color: Palette.framboiseSocle, radius: 0, x: 0, y: 6)
+                .rotationEffect(.degrees(-4))
+                .accessibilityAddTraits(.isHeader)
+            Text("Cache tes cartes, garde le plus petit total.")
+                .font(Police.texte(17))
+                .foregroundStyle(Palette.prune)
+                .multilineTextAlignment(.center)
+            Spacer()
+            VStack(spacing: 14) {
+                Button(action: jouer) {
+                    libelle("Jouer", taille: 30).frame(maxWidth: .infinity, minHeight: 66)
+                }
+                .buttonStyle(.bonbonVert)
+                .accessibilityHint(resume)
+                // Côte à côte ; l'un sous l'autre aux tailles d'accessibilité,
+                // où « Paramètres » ne tient plus sur une demi-largeur (« Para… »).
+                let disposition = grand ? AnyLayout(VStackLayout(spacing: 14)) : AnyLayout(HStackLayout(spacing: 14))
+                disposition {
+                    Button(action: regles) {
+                        libelle("Règles").frame(maxWidth: .infinity, minHeight: 52)
+                    }
+                    .buttonStyle(.bonbonBleu)
+                    Button(action: parametres) {
+                        libelle("Paramètres").foregroundStyle(Palette.jauneIcone)
+                            .frame(maxWidth: .infinity, minHeight: 52)
+                    }
+                    .buttonStyle(.bonbonJaune)
+                }
+                Text(resume)
+                    .font(Police.texte(14))
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.center)
+                    .shadow(color: Palette.framboiseSocle.opacity(0.6), radius: 0, x: 0, y: 1)
+            }
+            .padding(.horizontal, 28)
+            .padding(.bottom, 24)
+        }
+    }
+
+    private func libelle(_ t: String, taille: CGFloat = 20) -> some View {
+        Text(t).font(Police.titre(taille)).lineLimit(1).minimumScaleFactor(0.6).padding(.horizontal, 6)
     }
 }
 
