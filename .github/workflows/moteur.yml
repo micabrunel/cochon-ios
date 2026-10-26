@@ -1,0 +1,46 @@
+# Tester le moteur de règles et l'ordinateur (paquet Swift pur) sous Linux,
+# sur les runners du cluster (label `cluster`), dans l'image Swift
+# officielle. Gratuit, rapide, et c'est le même code que fera tourner le
+# futur serveur multijoueur. Ce contrôle est obligatoire avant fusion.
+
+name: Moteur
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: moteur-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: Tests du moteur (Linux)
+    runs-on: [self-hosted, linux, cluster]
+    container: swift:6.1
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version de Swift
+        run: swift --version
+
+      - name: Tests (règles, IA, rejeu, sérialisation)
+        working-directory: Paquets/CochonMoteur
+        run: |
+          set -o pipefail
+          swift test 2>&1 | tee tests.log | grep -aE "error:|failed|Executed|victoires" || true
+          # Les échecs en annotations, lisibles sans ouvrir le journal.
+          (grep -aE "error:" tests.log | head -10 | while read -r l; do echo "::error title=Test::$l"; done) || true
+          grep -aE "victoires" tests.log | while read -r l; do echo "::notice title=Malin contre facile::$l"; done
+          grep -aqE "Executed [0-9]+ tests, with 0 failures" tests.log
+          ! grep -aqE "Executed [0-9]+ tests, with [1-9][0-9]* failures" tests.log
+
+      - name: Journal complet en cas d'échec
+        if: failure()
+        run: tail -200 Paquets/CochonMoteur/tests.log || true

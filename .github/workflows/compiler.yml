@@ -1,0 +1,64 @@
+# Compiler l'application pour iPhone, sans la signer, et rejouer les tests
+# du moteur sur macOS.
+#
+# Tourne sur un Mac auto-hébergé (le Mac de Michael, voir
+# scripts/installer-runner-mac.sh) : les Mac hébergés de GitHub sont
+# payants pour un dépôt privé, et Michael ne paie aucun service
+# d'infrastructure. Sans Mac en ligne, le travail reste en file d'attente
+# (jaune), il ne passe pas au rouge.
+
+name: Compiler
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: compiler-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  compiler:
+    name: App iPhone (macOS)
+    runs-on: [self-hosted, macOS]
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Xcode utilisé
+        run: xcodebuild -version
+
+      - name: Tests du moteur sur macOS
+        working-directory: Paquets/CochonMoteur
+        run: |
+          set -o pipefail
+          swift test 2>&1 | tee tests.log | grep -E "error:|failed|Executed" || true
+          grep -qE "Executed [0-9]+ tests, with 0 failures" tests.log
+
+      - name: Générer le projet Xcode
+        run: |
+          command -v xcodegen >/dev/null || brew install xcodegen
+          xcodegen generate
+
+      - name: Compiler pour iPhone (sans signature)
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project Cochon.xcodeproj \
+            -scheme Cochon \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            2>&1 | tee build.log | grep -E "error:|warning: .*Cochon/|BUILD (SUCCEEDED|FAILED)" || true
+          (grep -E "error:" build.log | sort -u | head -8 | while read -r l; do echo "::error title=Compilation::$l"; done) || true
+          grep -q "BUILD SUCCEEDED" build.log
+
+      - name: Journal complet en cas d'échec
+        if: failure()
+        run: tail -200 build.log || true

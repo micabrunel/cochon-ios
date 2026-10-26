@@ -1,0 +1,10 @@
+// Signature de l'application.
+//
+// L'identifiant d'équipe Apple n'est pas un secret : il figure dans toute
+// application signée. Michael le trouve sur developer.apple.com/account,
+// rubrique « Abonnement » (dix caractères, par exemple AB12CD34EF).
+// Le flux TestFlight refuse de partir tant qu'il est vide.
+DEVELOPMENT_TEAM =
+
+// Réglage propre à un poste, jamais versionné (voir .gitignore).
+#include? "Local.xcconfig"
