@@ -45,6 +45,7 @@ Sources/CochonMoteur/
   Journal.swift    JournalPartie = (config, graine, actions) → rejouer()
 Sources/CochonIA/
   Ordinateur.swift niveaux facile et malin, ne lisent que VueJoueur
+Sources/CochonTable/   logique d'affichage de la table (voir plus bas)
 ```
 
 Principes :
@@ -87,15 +88,49 @@ Principes :
 - Mesure (test `testMalinBatFacile`, 300 manches en tête-à-tête) : malin
   gagne 275 manches, facile 19 ; moyenne 7,1 points contre 20,3.
 
+## La logique d'affichage (`CochonTable`)
+
+Même paquet, Foundation seulement, testée sous Linux. Elle ne contient
+**aucune règle** : elle suit la vue et les événements rendus par le moteur.
+
+```
+Sources/CochonTable/
+  Arbitre.swift       partie locale : état complet, ordinateurs, vue du joueur
+  Plateau.swift       les 52 cartes physiques (jetons à identité stable) : où est
+                      chaque carte, quelles faces le joueur connaît
+  Choregraphie.swift  événements → étapes d'animation (mouvements, durée,
+                      haptique, annonce) ; distribution ; étapes simultanées
+  Rythme.swift        vitesse (Tranquille/Normale/Rapide), « Réduire les animations »,
+                      pauses des ordinateurs
+  Disposition.swift   géométrie de la maquette 1 ramenée à l'écran, places autour de la table
+  Intentions.swift    gestes (toucher la pioche, une carte, « Fin du tour »…) → coups
+                      pris dans `coupsPossibles`
+  Textes.swift        bandeau, légendes, consignes, annonces, résultats, VoiceOver
+  Tours.swift         numéro du tour affiché
+```
+
+Test clé (`PlateauTests`) : 120 manches entières (2 à 4 joueurs) rejouées
+comme l'écran ; après chaque coup, le plateau doit être aligné sur la vue
+du joueur (tas, mains, carte tenue) et connaître **exactement** les mêmes
+faces : l'écran ne peut rien montrer que le joueur n'a pas le droit de voir.
+
 ## L'application
 
-- `Cochon/PartieModele.swift` : l'arbitre local (état complet, ordinateurs,
-  journal). En ligne, ce rôle passe au serveur ; l'écran ne lira toujours
-  que la vue du joueur.
-- `Cochon/TableMinimaleView.swift` : **écran de vérification** volontairement
-  sobre (2 à 4 joueurs, niveau, mode « Test » qui laisse les cartes connues
-  visibles). La vraie table attend la maquette choisie par Michael (carte
-  de Lisa) ; aucune couleur ni police définitive n'est posée ici.
+Design : `DESIGN.md` (maquette 1 « Fête foraine »).
+
+- `Cochon/Table/TableModele.swift` : enchaîne arbitre, chorégraphie et
+  plateau dans le temps (`withAnimation` étape par étape), fait jouer les
+  ordinateurs à leur rythme, émet les retours haptiques et les annonces.
+  En ligne, l'arbitre passera au serveur ; l'écran ne lira toujours que la
+  vue du joueur et les événements publics.
+- `Cochon/Table/TableVue.swift` : la table (cartes, étiquettes, flèches,
+  bandeau, actions, bouton COCHON!) ; `Annonces.swift` : surimpressions.
+- `Cochon/Ecrans/` : accueil, paramètres (2 à 4 joueurs, vitesse, niveau,
+  mode test), règles, résultats, menu de pause.
+- `Cochon/Design/` : jetons, cartes, mascotte, fond ; `Cochon/Polices/` :
+  Lilita One et Baloo 2 (OFL).
+- Le mode « Test » (Paramètres) laisse visibles les cartes que le joueur
+  connaît, comme l'ancien écran de vérification.
 - Icône provisoire (groin rose) pour que TestFlight accepte l'envoi.
 
 ## Intégration continue
