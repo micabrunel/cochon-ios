@@ -70,17 +70,37 @@ struct ParametresVue: View {
     @Binding var niveau: NiveauIA
     @Binding var montrerConnues: Bool
     let fermer: () -> Void
+    @Environment(\.dynamicTypeSize) private var tailleTexte
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 22) {
+        // En-tête fixe (titre + OK toujours visibles), réglages en dessous ;
+        // la feuille prend leur hauteur (voir FeuilleAjustee).
+        FeuilleAjustee(hauteurEstimee: 560) {
             HStack {
                 Text("Paramètres").font(Police.titre(28)).foregroundStyle(Palette.framboise)
+                    .lineLimit(1).minimumScaleFactor(0.5) // jamais coupé en plein mot
+                    .accessibilityAddTraits(.isHeader)
                 Spacer()
                 Button(action: fermer) {
-                    Text("OK").font(Police.titre(18)).frame(width: 64, height: 40)
+                    Text("OK").font(Police.titre(18)).frame(minWidth: 64, minHeight: 40)
+                        .padding(.horizontal, 4)
                 }
                 .buttonStyle(.bonbonVert)
             }
+            .padding(.horizontal, 24)
+            .padding(.top, 24)
+            .padding(.bottom, 16)
+        } contenu: {
+            reglages
+                .padding(.horizontal, 24)
+                .padding(.top, 6)
+                .padding(.bottom, 24)
+        }
+        .background(Palette.carteFondBas.ignoresSafeArea())
+    }
+
+    private var reglages: some View {
+        VStack(alignment: .leading, spacing: 22) {
             groupe("Joueurs", options: [2, 3, 4], choix: $nombreJoueurs) { "\($0)" }
             Text(nombreJoueurs == 2 ? "Toi contre 1 ordi" : "Toi contre \(nombreJoueurs - 1) ordis")
                 .font(Police.texte(14)).foregroundStyle(Palette.prune).padding(.top, -14)
@@ -93,22 +113,27 @@ struct ParametresVue: View {
                 }
             }
             .tint(Palette.turquoise)
-            Spacer()
         }
-        .padding(24)
-        .background(Palette.carteFondBas.ignoresSafeArea())
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func groupe<T: Hashable>(_ titre: String, options: [T], choix: Binding<T>,
                                      libelle: @escaping (T) -> String) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        // En ligne ; en colonne aux tailles d'accessibilité, où « Tranquille »
+        // ne tient plus sur un tiers de largeur.
+        let disposition = tailleTexte.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: 10))
+                                                          : AnyLayout(HStackLayout(spacing: 10))
+        return VStack(alignment: .leading, spacing: 8) {
             Text(titre).font(Police.etiquette(16)).foregroundStyle(Palette.framboiseTexte)
-            HStack(spacing: 10) {
+            disposition {
                 ForEach(options, id: \.self) { o in
                     let actif = choix.wrappedValue == o
                     Button { choix.wrappedValue = o } label: {
                         Text(libelle(o))
                             .font(Police.titre(18))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.6)
+                            .padding(.horizontal, 4)
                             .foregroundStyle(actif ? .white : Palette.framboiseTexte)
                             .frame(maxWidth: .infinity, minHeight: 46)
                     }

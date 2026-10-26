@@ -66,7 +66,8 @@ struct TableVue: View {
                        regles: { menuOuvert = false; reglesOuvertes = true },
                        nouvellePartie: { menuOuvert = false; rejouer() },
                        accueil: { menuOuvert = false; quitter() })
-                .presentationDetents([.height(340)])
+            // Hauteur : celle du contenu, posée par la vue elle-même (FeuilleAjustee) ;
+            // l'ancien `.height(340)` coupait le menu en grand texte.
         }
         .sheet(isPresented: $reglesOuvertes) { ReglesVue() }
     }

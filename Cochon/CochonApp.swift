@@ -91,7 +91,7 @@ struct RacineVue: View {
         .sheet(isPresented: $parametresOuverts) {
             ParametresVue(nombreJoueurs: $nombreJoueurs, vitesse: $vitesse, niveau: $niveau,
                           montrerConnues: $montrerConnues) { parametresOuverts = false }
-                .presentationDetents([.medium, .large])
+            // Hauteur : celle du contenu, posée par la vue elle-même (FeuilleAjustee).
         }
         .onAppear {
             if demo.ecran == .regles { reglesOuvertes = true }
