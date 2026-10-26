@@ -70,6 +70,7 @@ struct ParametresVue: View {
     @Binding var niveau: NiveauIA
     @Binding var montrerConnues: Bool
     let fermer: () -> Void
+    @Environment(\.dynamicTypeSize) private var tailleTexte
 
     var body: some View {
         // En-tête fixe (titre + OK toujours visibles), réglages en dessous ;
@@ -77,6 +78,7 @@ struct ParametresVue: View {
         FeuilleAjustee(hauteurEstimee: 560) {
             HStack {
                 Text("Paramètres").font(Police.titre(28)).foregroundStyle(Palette.framboise)
+                    .lineLimit(1).minimumScaleFactor(0.5) // jamais coupé en plein mot
                     .accessibilityAddTraits(.isHeader)
                 Spacer()
                 Button(action: fermer) {
@@ -117,15 +119,18 @@ struct ParametresVue: View {
 
     private func groupe<T: Hashable>(_ titre: String, options: [T], choix: Binding<T>,
                                      libelle: @escaping (T) -> String) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        // En ligne ; en colonne aux tailles d'accessibilité, où « Tranquille »
+        // ne tient plus sur un tiers de largeur.
+        let disposition = tailleTexte.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: 10))
+                                                          : AnyLayout(HStackLayout(spacing: 10))
+        return VStack(alignment: .leading, spacing: 8) {
             Text(titre).font(Police.etiquette(16)).foregroundStyle(Palette.framboiseTexte)
-            HStack(spacing: 10) {
+            disposition {
                 ForEach(options, id: \.self) { o in
                     let actif = choix.wrappedValue == o
                     Button { choix.wrappedValue = o } label: {
                         Text(libelle(o))
                             .font(Police.titre(18))
-                            // « Tranquille » sur 1/3 de largeur, même en très grand texte.
                             .lineLimit(1)
                             .minimumScaleFactor(0.6)
                             .padding(.horizontal, 4)

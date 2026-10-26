@@ -72,6 +72,7 @@ struct MenuPartie: View {
     let regles: () -> Void
     let nouvellePartie: () -> Void
     let accueil: () -> Void
+    @Environment(\.dynamicTypeSize) private var tailleTexte
 
     var body: some View {
         FeuilleAjustee(hauteurEstimee: 340) {
@@ -89,10 +90,13 @@ struct MenuPartie: View {
     }
 
     private var boutons: some View {
-        VStack(spacing: 14) {
+        // Côte à côte ; l'un sous l'autre aux tailles d'accessibilité.
+        let disposition = tailleTexte.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: 14))
+                                                          : AnyLayout(HStackLayout(spacing: 12))
+        return VStack(spacing: 14) {
             Button(action: reprendre) { libelle("Reprendre") }.buttonStyle(.bonbonVert)
             Button(action: regles) { libelle("Règles") }.buttonStyle(.bonbonBleu)
-            HStack(spacing: 12) {
+            disposition {
                 Button(action: nouvellePartie) { libelle("Nouvelle partie", taille: 17) }.buttonStyle(.bonbonFramboise)
                 Button(action: accueil) {
                     libelle("Accueil", taille: 17).foregroundStyle(Palette.jauneIcone)
@@ -103,7 +107,7 @@ struct MenuPartie: View {
     }
 
     private func libelle(_ t: String, taille: CGFloat = 20) -> some View {
-        // « Nouvelle partie » sur une demi-largeur, même en très grand texte.
+        // « Nouvelle partie » sur une demi-largeur jusqu'au XXXL.
         Text(t).font(Police.titre(taille)).lineLimit(1).minimumScaleFactor(0.6).padding(.horizontal, 6)
             .frame(maxWidth: .infinity, minHeight: 50)
     }
