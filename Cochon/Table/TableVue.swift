@@ -317,7 +317,7 @@ struct Banniere: View {
                 Text(detail)
                     .font(Police.texte(13))
                     .lineLimit(1)
-                    .minimumScaleFactor(0.7)
+                    .minimumScaleFactor(0.6)
                     .foregroundStyle(.white)
                     .padding(.horizontal, 9)
                     .padding(.vertical, 1)
@@ -343,6 +343,10 @@ struct Banniere: View {
                 SpringKeyframe(1.0, duration: 0.3, spring: .bouncy)
             }
         }
+        // Bandeau à hauteur fixe (46 pt) où titre et tour se partagent une
+        // ligne : son texte grandit moins que le reste de la table (XL au
+        // plus), sinon « ORDI 1 joue » et « Dernier tour » ne tiennent plus.
+        .dynamicTypeSize(...DynamicTypeSize.xLarge)
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isHeader)
     }
@@ -582,6 +586,8 @@ struct BoutonCochon: View {
         Button(action: action) {
             Text("COCHON!")
                 .font(Police.titre(22 * diametre / 100))
+                .lineLimit(1)
+                .minimumScaleFactor(0.6) // jamais « COCHO / N! » sur deux lignes
                 .foregroundStyle(.white)
                 .shadow(color: Palette.framboiseSocle, radius: 0, x: 0, y: 3)
                 .frame(width: diametre, height: diametre)
