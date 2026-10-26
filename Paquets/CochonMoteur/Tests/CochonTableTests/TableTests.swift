@@ -1,5 +1,8 @@
 import CochonMoteur
 @testable import CochonTable
+#if canImport(CoreGraphics)
+import CoreGraphics
+#endif
 import Foundation
 import XCTest
 

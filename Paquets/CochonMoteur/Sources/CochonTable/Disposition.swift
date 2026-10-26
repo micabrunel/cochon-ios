@@ -1,8 +1,13 @@
 // Géométrie de la table, tirée de la maquette 1 « Fête foraine »
 // (390 × 844 pt, iPhone 14/15). Toutes les cotes sont celles de la
 // maquette ; elles sont ramenées à la zone sûre réelle de l'écran.
-// Sans SwiftUI : CGPoint et CGSize viennent de Foundation (aussi sous Linux).
+// Sans SwiftUI : CGPoint et CGSize viennent de Foundation sous Linux, de
+// CoreGraphics sur Apple (où Foundation seul ne rend pas visible leur
+// conformité à Equatable).
 
+#if canImport(CoreGraphics)
+import CoreGraphics
+#endif
 import Foundation
 
 /// Place d'un joueur autour de la table, vue depuis le joueur (toujours en bas).
