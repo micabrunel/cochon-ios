@@ -16,7 +16,7 @@ struct CalqueAnnonces: View {
                     AnnonceCochon(texte: Textes.sousTitreCochon(j, moi: modele.moi, toursRestants: n))
                         .transition(.opacity)
                 case .plusUn(let j):
-                    PlusUn()
+                    PlusUn(fige: modele.fige)
                         .position(x: d.etiquette(d.place(j)).x + 34 * d.echelle, y: d.etiquette(d.place(j)).y - 26 * d.echelle)
                         .transition(.opacity)
                 default:
@@ -65,6 +65,8 @@ struct Bulle: View {
 
 /// « +1 » qui monte en s'effaçant près de l'étiquette du joueur pénalisé.
 struct PlusUn: View {
+    /// Mode démo : arrêté à mi-course, bien visible, pour la capture.
+    var fige = false
     @State var parti = false
     @Environment(\.accessibilityReduceMotion) var reduire
 
@@ -73,10 +75,11 @@ struct PlusUn: View {
             .font(Police.titre(30))
             .foregroundStyle(Palette.jaune)
             .shadow(color: Palette.framboiseSocle, radius: 0, x: 0, y: 3)
-            .offset(y: parti && !reduire ? -36 : 0)
-            .scaleEffect(parti || reduire ? 1 : 0.7)
-            .opacity(parti ? 0 : 1)
+            .offset(y: fige ? -16 : (parti && !reduire ? -36 : 0))
+            .scaleEffect(fige || parti || reduire ? 1 : 0.7)
+            .opacity(fige ? 1 : (parti ? 0 : 1))
             .onAppear {
+                guard !fige else { return }
                 withAnimation(.timingCurve(0.23, 1, 0.32, 1, duration: 1.0).delay(0.1)) { parti = true }
             }
             .accessibilityHidden(true)

@@ -1,22 +1,13 @@
 # Compiler l'application pour iPhone, sans la signer, et rejouer les tests
 # du moteur sur macOS.
 #
-# Tourne sur un Mac auto-hébergé (le Mac de Michael, voir
-# scripts/installer-runner-mac.sh) : les Mac hébergés de GitHub sont
-# payants pour un dépôt privé, et Michael ne paie aucun service
-# d'infrastructure.
-#
-# Sans Mac en ligne, le travail reste en file d'attente (jaune), mais
-# GitHub l'annule au bout de 24 h : le check passe alors en « cancelled »,
-# sans qu'aucun code n'ait été compilé. Conséquences :
-#   - ce check (« App iPhone (macOS) ») ne doit PAS être obligatoire dans
-#     la protection de branche tant que le Mac n'est pas en ligne en
-#     permanence (sinon les PR restent bloquées ou passent sur un annulé) ;
-#   - un run annulé après 24 h se relance à la main quand le Mac est en
-#     ligne : `gh run rerun <id>` ou `gh workflow run compiler.yml --ref <branche>`
-#     (déclencheur `workflow_dispatch` ci-dessous).
-# `timeout-minutes` ne compte qu'à partir du démarrage sur le runner : il
-# ne raccourcit pas l'attente en file.
+# Tourne sur un Mac hébergé par GitHub (`macos-latest`) : gratuit tant
+# que le dépôt est public (décision de Michael, 26/10). S'il repasse en
+# privé, ces Mac deviennent payants : revenir alors au Mac auto-hébergé,
+# `runs-on: [self-hosted, macOS]` (scripts/installer-runner-mac.sh), et ne
+# pas rendre ce check obligatoire tant que ce Mac n'est pas en ligne en
+# permanence (sans lui, le travail reste en file puis est annulé au bout
+# de 24 h). Relance à la main : `gh workflow run compiler.yml --ref <branche>`.
 
 name: Compiler
 
@@ -36,7 +27,7 @@ permissions:
 jobs:
   compiler:
     name: App iPhone (macOS)
-    runs-on: [self-hosted, macOS]
+    runs-on: macos-latest
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4

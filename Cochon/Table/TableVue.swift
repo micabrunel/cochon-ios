@@ -6,16 +6,20 @@ import SwiftUI
 struct TableVue: View {
     let reglages: Reglages
     let quitter: () -> Void
+    /// Mode démo : ouvrir le menu de la partie dès l'arrivée.
+    let menuAuDepart: Bool
 
     @State private var modele: TableModele
     @State private var menuOuvert = false
     @State private var reglesOuvertes = false
     @Environment(\.accessibilityReduceMotion) private var reduire
 
-    init(reglages: Reglages, quitter: @escaping () -> Void) {
+    init(reglages: Reglages, scene: SceneDemo? = nil, quitter: @escaping () -> Void) {
         self.reglages = reglages
         self.quitter = quitter
-        _modele = State(initialValue: TableModele(reglages: reglages))
+        menuAuDepart = scene?.ecran == .menu
+        _modele = State(initialValue: scene.map { TableModele(reglages: reglages, scene: $0) }
+                            ?? TableModele(reglages: reglages))
     }
 
     var body: some View {
@@ -53,6 +57,7 @@ struct TableVue: View {
         .onAppear {
             modele.rythme.reduire = reduire
             modele.demarrer()
+            if menuAuDepart { menuOuvert = true }
         }
         .onDisappear { modele.arreter() }
         .onChange(of: reduire) { _, valeur in modele.rythme.reduire = valeur }

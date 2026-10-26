@@ -1,0 +1,93 @@
+# Captures de tous les écrans de l'app sur le simulateur iPhone, publiées
+# en artefact « captures » (une image par écran, planche.png, index.html).
+# Lance scripts/captures-ecrans.sh, le même script que sur un Mac.
+#
+# Exécuteur : Mac hébergé par GitHub (`macos-latest`, gratuit tant que le
+# dépôt est public ; payant s'il repasse en privé). Le Mac auto-hébergé
+# (scripts/installer-runner-mac.sh) reste au choix à la main : Actions ›
+# Captures › Run workflow › exécuteur « self-hosted ».
+#
+# Déclenchement : à la main, et sur les PR qui touchent l'app, le mode
+# démo ou ce flux (pour voir les écrans pendant la relecture).
+#   gh workflow run captures.yml --ref <branche>
+#   gh run download <id> -n captures
+
+name: Captures
+
+on:
+  workflow_dispatch:
+    inputs:
+      executeur:
+        description: "Mac qui fait les captures"
+        type: choice
+        options: [macos-latest, macos-26, macos-15, self-hosted]
+        default: macos-latest
+      graine:
+        description: "Graine du mode démo"
+        default: "2026"
+  pull_request:
+    paths:
+      - "Cochon/**"
+      - "Paquets/CochonMoteur/Sources/**"
+      - "project.yml"
+      - "scripts/captures-ecrans.sh"
+      - "scripts/planche.swift"
+      - ".github/workflows/captures.yml"
+
+concurrency:
+  group: captures-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  captures:
+    name: Captures iPhone (simulateur)
+    runs-on: ${{ inputs.executeur == 'self-hosted' && fromJSON('["self-hosted","macOS"]') || inputs.executeur || 'macos-latest' }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Xcode et simulateurs
+        run: |
+          xcodebuild -version
+          xcrun simctl list runtimes
+          xcrun simctl list devices available | grep -E "iPhone 1[67] Pro " || true
+
+      # Verdict = code de sortie du script (construction, chaque capture,
+      # planche) ; GRAINE passe par l'environnement, jamais dans le shell.
+      - name: Captures
+        shell: bash
+        env:
+          GRAINE: ${{ inputs.graine || '2026' }}
+        run: scripts/captures-ecrans.sh
+
+      - name: Publier les captures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: captures
+          path: captures/
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Résumé
+        if: success()
+        shell: bash
+        run: |
+          {
+            echo "### Captures ($(ls captures/[0-9][0-9]-*.png | wc -l | tr -d ' ') écrans)"
+            echo
+            for f in captures/[0-9][0-9]-*.png; do echo "- $(basename "$f")"; done
+            echo
+            echo "Artefact « captures » : planche.png, index.html et une image par écran."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Journal de construction en cas d'échec
+        if: failure()
+        shell: bash
+        run: |
+          [ -f build/captures.log ] || exit 0
+          awk '/error:/ && !vu[$0]++ && n++ < 15 { print "::error title=Xcode::" $0 }' build/captures.log
+          tail -150 build/captures.log

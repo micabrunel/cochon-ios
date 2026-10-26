@@ -48,6 +48,8 @@ final class TableModele {
     var valetMien: Int?
     var attenteRemplacement = false
     var rythme: Rythme
+    /// Mode démo (captures) : table figée sur une scène, annonces gardées.
+    private(set) var fige = false
 
     @ObservationIgnored private var tache: Task<Void, Never>?
     @ObservationIgnored private var compteurIds = 0
@@ -64,6 +66,24 @@ final class TableModele {
         compteur = CompteurTours(nombreJoueurs: reglages.nombreJoueurs)
     }
 
+    /// Mode démo : la table s'ouvre directement sur une scène jouée par le
+    /// moteur (voir `Demo` dans CochonTable), sans distribution ni minuterie.
+    init(reglages: Reglages, scene: SceneDemo) {
+        self.reglages = reglages
+        rythme = Rythme(vitesse: reglages.vitesse)
+        arbitre = scene.arbitre
+        plateau = scene.plateau
+        vue = scene.vue
+        compteur = scene.compteur
+        occupe = scene.occupe
+        distributionFaite = true
+        resultatsVisibles = scene.resultats
+        valetMien = scene.valetMien
+        fige = true
+        annonces = scene.annonces.enumerated().map { AnnonceAffichee(id: $0.offset + 1, annonce: $0.element) }
+        compteurIds = scene.annonces.count
+    }
+
     var moi: Int { arbitre.moi }
     var commandes: Commandes {
         guard !occupe else { return Commandes() }
@@ -77,7 +97,7 @@ final class TableModele {
     /// Distribution animée, puis les ordinateurs regardent leurs 2 cartes
     /// tous en même temps : le joueur n'attend pas pour regarder les siennes.
     func demarrer() {
-        guard tache == nil else { return }
+        guard tache == nil, !fige else { return }
         tache = Task { [weak self] in
             guard let self else { return }
             let etapes = Choregraphie.distribution(nombreJoueurs: vue.nombreJoueurs,
