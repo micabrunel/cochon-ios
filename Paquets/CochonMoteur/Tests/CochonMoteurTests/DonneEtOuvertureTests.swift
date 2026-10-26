@@ -23,6 +23,29 @@ final class DonneTests: XCTestCase {
         XCTAssertThrowsError(try Moteur.nouvellePartie(config: ConfigPartie(nombreJoueurs: 2, premierJoueur: 2), graine: 1))
     }
 
+    func testMinuteurAdmisQuinzeTrenteSoixanteOuAucun() throws {
+        for m in [nil, 15, 30, 60] as [Int?] {
+            let e = try Moteur.nouvellePartie(config: ConfigPartie(nombreJoueurs: 2, minuteur: m), graine: 1)
+            XCTAssertEqual(e.config.minuteur, m)
+        }
+    }
+
+    func testMinuteurHorsListeRefuse() {
+        for m in [-1, 0, 7, 14, 45, 61, 3600, Int.max] {
+            XCTAssertThrowsError(try Moteur.nouvellePartie(config: ConfigPartie(nombreJoueurs: 2, minuteur: m), graine: 1)) {
+                XCTAssertEqual($0 as? ErreurMoteur, .minuteurInvalide, "minuteur \(m)")
+            }
+        }
+    }
+
+    func testJournalAvecMinuteurTrafiqueRefuse() throws {
+        let json = #"{"config":{"nombreJoueurs":2,"premierJoueur":0,"minuteur":7},"graine":1,"actions":[]}"#
+        let journal = try JSONDecoder().decode(JournalPartie.self, from: Data(json.utf8))
+        XCTAssertThrowsError(try journal.rejouer()) {
+            XCTAssertEqual($0 as? ErreurMoteur, .minuteurInvalide)
+        }
+    }
+
     func testPersonneNeConnaitSesCartesAuDepart() throws {
         let e = try Moteur.nouvellePartie(config: ConfigPartie(nombreJoueurs: 3), graine: 5)
         for j in 0..<3 {

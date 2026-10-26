@@ -51,6 +51,13 @@ jobs:
         if: failure()
         working-directory: Paquets/CochonMoteur
         shell: bash
+        # Garde : si le travail a échoué avant les tests (checkout,
+        # conteneur), il n'y a pas de journal ; ne pas ajouter un faux
+        # « No such file » au diagnostic.
         run: |
+          if [ ! -f tests.log ]; then
+            echo "::notice title=Tests::pas de tests.log, échec avant les tests (voir les étapes précédentes)"
+            exit 0
+          fi
           awk '/error:|Fatal error|signal/ && n++ < 10 { print "::error title=Test::" $0 }' tests.log
           tail -200 tests.log

@@ -12,6 +12,9 @@ public enum Moteur {
         guard ConfigPartie.joueursPossibles.contains(config.nombreJoueurs) else {
             throw ErreurMoteur.nombreJoueursInvalide
         }
+        if let m = config.minuteur, !ConfigPartie.minuteursPossibles.contains(m) {
+            throw ErreurMoteur.minuteurInvalide
+        }
         guard (0..<config.nombreJoueurs).contains(config.premierJoueur) else {
             throw ErreurMoteur.joueurInconnu
         }
